@@ -251,14 +251,14 @@ TextArea errorScreen;
 
     private void error(String errorMsg){
 
-         errorScreen.setText("Error line: "+lineCounter+' '+errorMsg);
-        System.out.println("Error line: "+lineCounter+' '+errorMsg);
+       //  errorScreen.setText("Error line: "+lineCounter+' '+errorMsg);
+
         /*System.exit(0);*/
         try {
             throw new Exception();
         } catch (Exception e) {
-            errorScreen.setText("Error line: "+lineCounter+' '+errorMsg);
-            Thread.currentThread().stop();
+            errorScreen.setText(errorScreen.getText()+"\n"+
+                    "Error line: "+lineCounter+' '+errorMsg);
 
         }
         /*try {
