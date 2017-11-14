@@ -1,5 +1,6 @@
 package sample;
 
+import javax.management.StringValueExp;
 import java.util.ArrayList;
 
 public class entry extends ArrayList{
@@ -44,14 +45,24 @@ public class entry extends ArrayList{
 
     @Override
     public boolean equals(Object v) {
-        return this.mnemonic.equalsIgnoreCase((String)v);
+        entry f =  (entry)v;
+        return this.mnemonic.equalsIgnoreCase(f.mnemonic);
     }
 
     @Override
     public int hashCode() {
-        int hash = 7;
-        hash = 17 * hash + (this.mnemonic != null ? this.mnemonic.hashCode() : 0);
-        return hash;
+        return mnemonic.hashCode();
     }
 
+    public String getMnemonic() {
+        return mnemonic;
+    }
+
+    public int getToken() {
+        return token;
+    }
+
+    public int getOpcode() {
+        return opcode;
+    }
 }

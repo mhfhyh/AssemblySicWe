@@ -1,43 +1,66 @@
 package sample;
 
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.cell.PropertyValueFactory;
 
-import java.util.Iterator;
+import java.util.ArrayList;
 import java.util.LinkedList;
 
 
 public class parser extends lexer{
-@FXML
-TextArea inputScreen;
+    @FXML
+    TextArea inputScreen;
 
-@FXML
-TextArea errorScreen;
+    @FXML
+    TextArea errorScreen;
 
-@FXML
+    @FXML
     Button ok;
 
-    private int lookahead;
+    @FXML TableView<entry> SymbolTableView;
+    @FXML TableColumn<entry,String> LabelColumn;
+    @FXML TableColumn<entry,Integer> TypeColumn ;
+    @FXML TableColumn<entry,Integer> AddressColumn ;
+
+    private int lookahead = -1;
     private int numOfWord;
-    private int lineCounter=0;
+    private ArrayList<machineCode> intermediate = new ArrayList<>();
+    private String addressLabel = null;
+    private String mCode = "";
+    private String codeRest = null;
+    private boolean absoluteFlag = false;
+
+    ObservableList<CharSequence> code ;
+
     public void okOnAction(){
 
-        ObservableList<CharSequence> code = inputScreen.getParagraphs();
-        Iterator<CharSequence> it = code.iterator();
+        tokenVal = -1;
+        PC = 0;
+        label = null;
+        errorNum = -1;
+        lineCounter = 0;
+        errorScreen.setText("");
+        SymbolTable = new ArrayList<>();
+        //initialize the variables with zero values to began new assembling . At each time user press ok program began from scratch
 
-        while (it.hasNext()){//iterate throw all the code
-            lineCounter++;
-            words = splitIgnoreSpaces(it.next().toString());
-            currWordIndex=0;
-            numOfWord = words.size();
-            if (words != null){//in cass of null that is mean this lin is a line comment
-                lookahead =lexical();
-                sic(); }
-        }
+        code = inputScreen.getParagraphs();
+        nextSentence();
+        if (words != null)// in case of comment will skip until find a statement not a comment
+            sic();
 
 
+    ObservableList<entry> list=FXCollections.observableArrayList(SymbolTable);
+        LabelColumn.setCellValueFactory(new PropertyValueFactory<>("mnemonic"));
+        TypeColumn.setCellValueFactory(new PropertyValueFactory<>("token"));
+        AddressColumn.setCellValueFactory(new PropertyValueFactory<>("opcode"));
+
+        SymbolTableView.setItems(list);
     }
 
     private void sic(){
@@ -45,16 +68,21 @@ TextArea errorScreen;
         header();
         body();
         tail();
+        pass2();
 
     }
 
+
+
     private void header(){
-    newID = true;
-    match(ID);
-    newID = false;
-    match(START);
-    match(NUM);
-    SymbolTable.add(new entry(label,ID,tokenVal)); label = null; tokenVal = -1;
+        //newID = true;
+        match(ID);
+        String currLabel = label;
+       // newID = false;
+        match(START);
+        match(NUM);
+        PC = tokenVal;
+        SymbolTable.add(new entry(currLabel,START,tokenVal));
 
 
     }
@@ -62,11 +90,10 @@ TextArea errorScreen;
     private void body(){
 
         if (lookahead == ID){
-            newID = true;
+            String currLabel = label;
             match(ID);
-            newID = false;
-            SymbolTable.add(new entry(label,ID,PC)); label = null; tokenVal = -1;
-            reset();
+                SymbolTable.add(new entry(currLabel,ID,PC));
+            rest();
             body();
         }
         else if(lookahead == FORMAT1 || lookahead == FORMAT2 || lookahead == FORMAT3 ||lookahead == PLUS ) {
@@ -79,16 +106,16 @@ TextArea errorScreen;
 
     private void tail(){
         match(END);
-        match(ID);
+        match(START);
 
     }
 
-    private void reset(){
+    private void rest(){
         if (lookahead == FORMAT1 || lookahead == FORMAT2 || lookahead == FORMAT3 ||lookahead == PLUS)
             stmt();
         else if (lookahead == WORD || lookahead == BYTE || lookahead == RESW ||lookahead == RESB)
             data();
-        else ; error("un unexpected token. found: "+tokensWithStrings.get(lookahead));//error
+        else error("un unexpected token. found: "+tokensWithStrings.get(lookahead));//error
 
 
     }
@@ -176,9 +203,20 @@ TextArea errorScreen;
 
             case BYTE:
                 match(BYTE);
-                if (lookahead == STRING) {match(STRING); PC += label.length();}
-                else if (lookahead == HEX) {match(HEX); PC += (label.length())/2;}
-                else  error("un unexpected token. found: "+tokensWithStrings.get(lookahead)); //error
+                String byteValue="";
+                if (lookahead == STRING){
+                    match(STRING);
+                    match(QUOTE);
+                    match(BYTEVLA);
+                    match(QUOTE);PC += label.length();}
+
+                else if (lookahead == HEX) {
+                    match(HEX);
+                    match(QUOTE);
+                    match(BYTEVLA);
+                    match(QUOTE);
+                    PC += (label.length())/2;}
+                //else  error("un unexpected token. found: "+tokensWithStrings.get(lookahead)); //error
                 break;
 
             case RESW:
@@ -201,19 +239,25 @@ TextArea errorScreen;
 
     private void match(int tok){
         if (lookahead == tok){
-            if(currWordIndex < numOfWord)lookahead = lexical();}
+            if(currWordIndex == numOfWord)
+                nextSentence();
+            else
+                lookahead = lexical();
+
+        }
         else error("syntax error: un unexpected token. expected: "+tokensWithStrings.get(tok)+" found: "+tokensWithStrings.get(lookahead)); //syntax error
     }
 
 
     private LinkedList<String> splitIgnoreSpaces(String text){
 
-        if(text.charAt(0) == '/') return null; //this is in case of the line is a comment line
+        if(text.length() == 0 || text.charAt(0) == '/') return null; //this is in case of the line is a comment line , (text.length() == 0) to skip the line spaces
 
         LinkedList<String> Words = new LinkedList<>();
         int index=0;
         String word="";
-        boolean commentFlag = false;//this indicate finding comment to ignore the reset -> 'false' indicate not finding comment tell now
+        boolean commentFlag = false;//this indicate finding comment to ignore the rest -> 'false' indicate not finding comment tell now
+        boolean unAcChar = false;//this indicate finding un accepted character
 
         for(int i=0;i<text.length();i++){// iterate throw all the line
 
@@ -221,14 +265,32 @@ TextArea errorScreen;
 
                 char ch = text.charAt(i);
                 if (ch == '/'){commentFlag = true; break;}//case of comment to ignore all the text after it
-                if (ch != '@' && ch != '#' && ch != ',' && !Character.isDigit(ch) && !Character.isLetter(ch))error("un accepted character");//error un accepted char
+                if (ch != '@' && ch != '#' && ch != '+'&& ch != ',' && ch != '\'' && ch != '=' && !Character.isDigit(ch) && !isEnglish(ch)){unAcChar = true; error("un accepted character ' "+ch+" '");break;}//error un accepted char}
 
-                if(ch == '@' || ch == '#' || ch ==','){//this is in case if finding ',' comma before or after word. Finding text followed by ('#' or '@') without space in between
-                        if (word.length()>0){
-                           if (ch == ','){Words.add(word);word="";}
-                           else error("text is followed by "+ch+" without space in between");
+                if (ch == '\''){
+                    if (word.length()>0) {
+                        if (word.equalsIgnoreCase("c") || word.equalsIgnoreCase("h")) {
+                            Words.add(word);
+                            word = "";
+                        } else error("un accepted prefix ' " + word + " ' before quote , accepted is ether 'c' OR 'h'");
+                    }
+                        Words.add("\'");
+                        i++;
+                        String quotedText="";
+                        while (text.charAt(i)!='\''){
+                            quotedText += String.valueOf(text.charAt(i++));
+                            if (i == text.length()) {error("ending quote \' not found"); break;}
                         }
-                    Words.add(",");
+                        Words.add(quotedText);
+                        if (text.charAt(i)=='\''){ i++; Words.add("\'");}
+                        continue; //while we done we have to skip this iteration to next one
+                    }
+                 if(ch == '@' || ch == '#'|| ch == '+' || ch == ',' || ch == '='){//this is in case if finding ',' comma before or after word. Finding text followed by ('#' or '@') without space in between
+                    if (word.length()>0){
+                        if (ch == ',' ){Words.add(word);word="";}
+                        else error("text is followed by "+ch+" without space in between");
+                    }
+                    Words.add(String.valueOf(ch));
                     break;
                 }//end of case comma
 
@@ -243,6 +305,7 @@ TextArea errorScreen;
             }
 
             if (commentFlag)break;//complement of case of comment
+            if (unAcChar)return null;
 
         }
         return Words;
@@ -251,13 +314,16 @@ TextArea errorScreen;
 
     private void error(String errorMsg){
 
-       //  errorScreen.setText("Error line: "+lineCounter+' '+errorMsg);
+        //  errorScreen.setText("Error line: "+lineCounter+' '+errorMsg);
 
         /*System.exit(0);*/
         try {
             throw new Exception();
         } catch (Exception e) {
-            errorScreen.setText(errorScreen.getText()+"\n"+
+
+            String old = errorScreen.getText();
+            if (old == null )old = "";
+            errorScreen.setText(old +"\n"+
                     "Error line: "+lineCounter+' '+errorMsg);
 
         }
@@ -267,6 +333,48 @@ TextArea errorScreen;
                 throwable.printStackTrace();
             }*/
         // error
+
+    }
+
+    private void nextSentence(){
+        if (lineCounter != 0){
+            intermediate.add(new machineCode(addressLabel,lineCounter,mCode,codeRest,absoluteFlag));
+            addressLabel =null;
+            mCode ="";
+            codeRest = null;
+            absoluteFlag = false;
+        }//writing the translated machine code to the intermediate list
+
+        lineCounter++;
+        while (lineCounter <= code.size()){
+            words = splitIgnoreSpaces(code.get(lineCounter-1).toString());
+            if (words != null){
+                currWordIndex = 0;
+                numOfWord = words.size();
+                lookahead = lexical();
+                break;
+            }
+            lineCounter++;
+        }
+        if (lineCounter > code.size()){lineCounter = 0;}
+        /*try {
+            if (lineCounter > code.size())Thread.currentThread().stop();
+        }catch (Exception e) {
+   // errorScreen.setText("Done ");
+        }*/
+
+
+    }
+
+    private void pass2() {
+
+    }
+    private boolean isEnglish(char ch){
+        if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'))return true;
+        return false;
+    }
+
+    public void TableButtonOnAction(){
 
     }
 }

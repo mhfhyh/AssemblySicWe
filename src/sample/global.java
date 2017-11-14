@@ -23,6 +23,8 @@ public class global {
     final int STRING = 16;
     final int HEX = 17;
     final int END = 18;
+    final int QUOTE = 19;
+    final int BYTEVLA = 20;
 
 
     //----------------errors numbers
@@ -30,9 +32,10 @@ public class global {
     final int unExpectedToken = 1112;
 
 
-   HashMap<Integer,String>  tokensWithStrings = new HashMap<>();
-   public static ArrayList<entry> opTable = new ArrayList<>();
-   public static ArrayList<entry> SymbolTable = new ArrayList<>();
+    HashMap<Integer,String>  tokensWithStrings = new HashMap<>();
+    public static ArrayList<entry> opTable = new ArrayList<>();
+    public static ArrayList<entry> SymbolTable = new ArrayList<>();
+
 
     global(){
         opTable.add(new entry("lda",FORMAT3,0x00));
@@ -72,6 +75,9 @@ public class global {
         tokensWithStrings.put(AAT,"AAt '@' ");
         tokensWithStrings.put(COMMA,"COMMA ',' ");
         tokensWithStrings.put(HASH,"HASH '#' ");
+        tokensWithStrings.put(QUOTE,"QUOTE '\'' ");
+        tokensWithStrings.put(BYTEVLA,"BYTEVLA");
+        tokensWithStrings.put(numFollByChar,"number followed by character without space in between");
 
     }
 
