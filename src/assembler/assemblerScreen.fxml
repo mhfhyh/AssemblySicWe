@@ -8,7 +8,7 @@
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.text.TextFlow?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="450.0" prefWidth="526.0" xmlns="http://javafx.com/javafx/9" xmlns:fx="http://javafx.com/fxml/1" fx:controller="sample.parser">
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="450.0" prefWidth="526.0" xmlns="http://javafx.com/javafx/9" xmlns:fx="http://javafx.com/fxml/1" fx:controller="assembler.parser">
     <children>
         <TextArea fx:id="inputScreen" layoutX="27.0" layoutY="14.0" prefHeight="246.0" prefWidth="292.0" AnchorPane.leftAnchor="27.0" AnchorPane.rightAnchor="207.0" AnchorPane.topAnchor="14.0" />
         <Button fx:id="ok" layoutX="170.0" layoutY="276.0" maxHeight="55.0" maxWidth="129.0" mnemonicParsing="false" onAction="#okOnAction" prefHeight="34.0" prefWidth="60.0" snapToPixel="false" text="ok" AnchorPane.leftAnchor="170.0" AnchorPane.rightAnchor="170.0">

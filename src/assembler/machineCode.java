@@ -1,4 +1,4 @@
-package sample;
+package assembler;
 
 import java.util.ArrayList;
 

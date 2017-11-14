@@ -1,4 +1,4 @@
-package sample;
+package assembler;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
