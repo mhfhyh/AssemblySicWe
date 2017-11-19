@@ -5,14 +5,14 @@ import java.util.LinkedList;
 public class lexer extends global {
 
     protected static LinkedList<String> words;
-    protected static boolean newID = false;
-    protected static int currWordIndex = 0;
+        protected static int currWordIndex = 0;
     protected static int tokenVal = -1;
     protected static int PC = 0;
     protected static String label = null;
     protected int errorNum = -1;
     protected static int lineCounter = 0;
     protected static Boolean byteFlag = false;
+
 
 
 
@@ -32,19 +32,28 @@ public class lexer extends global {
             if (byteFlag){ label = word; return BYTEVLA; }
 
             if (word.length()== 1){
-                if (word.equalsIgnoreCase("A")|| word.equalsIgnoreCase("X") || word.equalsIgnoreCase("L"))
-                    return REGISTER;
-                else if (word.equalsIgnoreCase("H"))return HEX;
-                else if (word.equalsIgnoreCase("C"))return STRING;
+                if (word.equalsIgnoreCase("A")){label = "0";return REGISTER;}
+                if (word.equalsIgnoreCase("X")){label = "1";return REGISTER;}
+                if (word.equalsIgnoreCase("L")){label = "2";return REGISTER;}
+                if (word.equalsIgnoreCase("B")){label = "3";return REGISTER;}
+                if (word.equalsIgnoreCase("S")){label = "4";return REGISTER;}
+                if (word.equalsIgnoreCase("T")){label = "5";return REGISTER;}
+                if (word.equalsIgnoreCase("F")){label = "6";return REGISTER;}
+                if (word.equalsIgnoreCase("H"))return HEX;
+                if (word.equalsIgnoreCase("C"))return STRING;
             }
 
             if (word.equalsIgnoreCase("start")) return START;
             if (word.equalsIgnoreCase("end")) return END;
             if (word.equalsIgnoreCase("word")) return WORD;
             if (word.equalsIgnoreCase("byte")) return BYTE;
+            if (word.equalsIgnoreCase("resw")) return RESW;
+            if (word.equalsIgnoreCase("resb")) return RESB;
                      entry test = new entry(word,0,0);//create an object of entry to compare its mnemonic -> it should be done like that to (overdid method  'equal' work)
-            if (opTable.contains(test)) return opTable.get(opTable.indexOf(test)).Token();
-            if (SymbolTable.contains(test)) return SymbolTable.get(SymbolTable.indexOf(test)).Token();
+            if (opTable.contains(test)) {
+                tokenVal = opTable.get(opTable.indexOf(test)).getOpcode();
+                return opTable.get(opTable.indexOf(test)).getToken();}
+            if (SymbolTable.contains(test)) return SymbolTable.get(SymbolTable.indexOf(test)).getToken();
             else {label = word; return ID;}
 
         }
@@ -68,4 +77,7 @@ public class lexer extends global {
         }
         return true;
     }
+
+
+
 }

@@ -14,17 +14,7 @@ public class entry extends ArrayList{
         this.opcode = opcode;
     }
 
-    public String Mnemonic() {
-        return mnemonic;
-    }
 
-    public int Token() {
-        return token;
-    }
-
-    public int Opcode() {
-        return opcode;
-    }
 
     public void setMnemonic(String mnemonic) {
         this.mnemonic = mnemonic;

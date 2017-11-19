@@ -25,6 +25,7 @@ public class global {
     final int END = 18;
     final int QUOTE = 19;
     final int BYTEVLA = 20;
+    final int BASE = 21;
 
 
     //----------------errors numbers
@@ -55,6 +56,14 @@ public class global {
 
         opTable.add(new entry("jsub",FORMAT3,0x48));
         opTable.add(new entry("rsub",FORMAT3,0x4c));
+
+        opTable.add(new entry("addr",FORMAT2,0x90));
+        opTable.add(new entry("subr",FORMAT2,0x94));
+        opTable.add(new entry("mulr",FORMAT2,0x98));
+        opTable.add(new entry("divr",FORMAT2,0x9c));
+        opTable.add(new entry("compr",FORMAT2,0xa0));
+        opTable.add(new entry("claer",FORMAT2,0xb4));
+        opTable.add(new entry("shiftr",FORMAT2,0xa8));
 
         opTable.add(new entry("word",WORD,0x4c));
         opTable.add(new entry("byte",BYTE,0x4c));

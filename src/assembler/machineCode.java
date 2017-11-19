@@ -6,16 +6,30 @@ public class machineCode extends ArrayList{
 
     private String addressLabel;
     private int line;
-    private String mCode;
+    private int format;//1 -> format one , 2 -> format 2 , 3 -> format 3 , 4 -> format 3 with indexing ,5 -> format 4 , 6 -> format 4 with indexing , 7 -> format 3 with intermediate , 8 -> format 3 with intermediate and indexing, 9 -> format 4 with intermediate ,10 -> format 4 with intermediate and indexing , 11 -> format 3 with indirect ,12 -> format 3 with indirect and indexing , 13 -> format 4 with indirect , 14 -> format 4 with indirect and indexing
+    private String InsCode;
     private String codeRest;
-    private boolean absoluteFlag;
+    private int pc;
+    private int base;
 
-    public machineCode(String addressLabel, int line, String mCode, String codeRest, boolean absoluteFlag) {
-        this.addressLabel = addressLabel;
+
+    public machineCode(int line ,int pc,int base,int format ,String InsCode,String addressLabel, String codeRest) {
         this.line = line;
-        this.mCode = mCode;
+        this.pc = pc;
+        this.base = base;
+        this.format = format;
+        this.addressLabel = addressLabel;
+        this.InsCode = InsCode;
         this.codeRest = codeRest;
-        this.absoluteFlag = absoluteFlag;
+
+    }
+
+    public int getFormat() {
+        return format;
+    }
+
+    public void setFormat(int format) {
+        this.format = format;
     }
 
     public String getAddressLabel() {
@@ -34,12 +48,12 @@ public class machineCode extends ArrayList{
         this.line = line;
     }
 
-    public String getmCode() {
-        return mCode;
+    public String getInsCode() {
+        return InsCode;
     }
 
-    public void setmCode(String mCode) {
-        this.mCode = mCode;
+    public void setInsCode(String insCode) {
+        this.InsCode = insCode;
     }
 
     public String getCodeRest() {
@@ -50,15 +64,23 @@ public class machineCode extends ArrayList{
         this.codeRest = codeRest;
     }
 
-    public boolean isAbsoluteFlag() {
-        return absoluteFlag;
+    public int getPc() {
+        return pc;
     }
 
-    public void setAbsoluteFlag(boolean absoluteFlag) {
-        this.absoluteFlag = absoluteFlag;
+    public void setPc(int pc) {
+        this.pc = pc;
     }
 
-    @Override
+    public int getBase() {
+        return base;
+    }
+
+    public void setBase(int base) {
+        this.base = base;
+    }
+
+    /*@Override
     public boolean equals(Object v) {
         return this.addressLabel.equalsIgnoreCase((String)v);
     }
@@ -68,7 +90,7 @@ public class machineCode extends ArrayList{
         int hash = 7;
         hash = 17 * hash + (this.addressLabel != null ? this.addressLabel.hashCode() : 0);
         return hash;
-    }
+    }*/
 
 }
 
