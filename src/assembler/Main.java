@@ -12,7 +12,7 @@ public class Main extends Application {
     public void start(Stage primaryStage) throws Exception{
         Parent root = FXMLLoader.load(getClass().getResource("assemblerScreen.fxml"));
         primaryStage.setTitle("Sic Assembler ");
-        primaryStage.setScene(new Scene(root, 526, 450));
+        primaryStage.setScene(new Scene(root, 526, 504));
         primaryStage.show();
     }
 

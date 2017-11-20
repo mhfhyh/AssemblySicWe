@@ -21,14 +21,14 @@ public class parser extends lexer{
     @FXML
     protected TextArea errorScreen;
 
-    @FXML
-    Button ok;
+
 
     @FXML TableView<entry> SymbolTableView;
     @FXML TableColumn<entry,String> LabelColumn;
     @FXML TableColumn<entry,Integer> TypeColumn ;
     @FXML TableColumn<entry,Integer> AddressColumn ;
     @FXML TextArea machineCodeScreen ;
+    @FXML Button toHex;
 
     private int lookahead = -1;
     private int numOfWord;
@@ -37,7 +37,7 @@ public class parser extends lexer{
     private String addressLabel = null;
     private String insCode = null;
     private String codeRest = null;
-    private String output = "";
+
     private int Base = 0;
     private int lineBase = 0;
     private int linePc = 0;
@@ -55,7 +55,6 @@ public class parser extends lexer{
         lineCounter = 0;
         errorScreen.setText("");
         SymbolTable = new ArrayList<>();
-        output = "";
         //initialize the variables with zero values to began new assembling . At each time user press ok program began from scratch
 
         code = inputScreen.getParagraphs();
@@ -90,7 +89,7 @@ public class parser extends lexer{
         PC = tokenVal;// getting the starting address integer value from the lexical analyzer
         match(NUM);   // match the starting address
 
-        SymbolTable.add(new entry(currLabel,START,tokenVal));//adding the starting program label with its address to symbol table
+        SymbolTable.add(new entry(currLabel,ID,tokenVal));//adding the starting program label with its address to symbol table
 
     }
 
@@ -128,7 +127,7 @@ public class parser extends lexer{
 
     private void tail(){
         match(END);
-        match(START);
+        match(ID);
 
     }
 
@@ -147,14 +146,14 @@ public class parser extends lexer{
         switch (lookahead){
             case FORMAT1:
                              format = 1;//instruction line format
-                             insCode = Integer.toBinaryString(tokenVal);// getting the instruction binary code as string value from the lexical analyzer
+                             insCode = label;// getting the instruction binary code as string value from the lexical analyzer
                 match(FORMAT1);
                 PC += 1;
                 break;
 
             case FORMAT2:
                              format = 2;//instruction line format
-                             insCode = Integer.toBinaryString(tokenVal);// getting the instruction binary code as string value from the lexical analyzer
+                             insCode = label;// getting the instruction binary code as string value from the lexical analyzer
                              PC += 2;
                 match(FORMAT2);
                             addressLabel = label;// getting the first operand string value from the lexical analyzer
@@ -164,7 +163,7 @@ public class parser extends lexer{
 
             case FORMAT3:
                             format = 3;//instruction line format
-                            insCode = Integer.toBinaryString(tokenVal);// getting the instruction binary code as string value from the lexical analyzer
+                            insCode = label;// getting the instruction binary code as string value from the lexical analyzer
                 match(FORMAT3);
                 PC += 3;
                 z();
@@ -173,8 +172,8 @@ public class parser extends lexer{
             case PLUS:
                 match(PLUS);
                 PC += 4;
-                            format = 4;//instruction line format
-                            insCode = Integer.toBinaryString(tokenVal);// getting the instruction binary code as string value from the lexical analyzer
+                            format = 7;//instruction line format
+                            insCode = label;// getting the instruction binary code as string value from the lexical analyzer
                 match(FORMAT3);
                 z();
                 break;
@@ -188,8 +187,9 @@ public class parser extends lexer{
                     codeRest = label;// getting the second operand as string value from the lexical analyzer
             match(REGISTER);
         }
+        //if lookahead != COMMA it's mean Format 2 with one operand
     }
-    private void z(){
+    private void z(){//called from stmt->format 3 and format 4
         linePc = PC;
         lineBase = Base;
         if (lookahead == ID){
@@ -209,7 +209,7 @@ public class parser extends lexer{
             match(ID);
            // index();
         }
-
+        else errorWithNext("syntax error: un unexpected token. expected: ID or HASH or ATT found: "+tokensWithStrings.get(lookahead));
     }
     private void index(){
         if (lookahead == COMMA){
@@ -217,6 +217,7 @@ public class parser extends lexer{
                         format++;
             match(REGISTER);
         }
+
 
     }
     private void imm(){
@@ -227,7 +228,7 @@ public class parser extends lexer{
         else if (lookahead == ID)
             match(ID);
 
-        /*else error("un unexpected token. found: "+tokensWithStrings.get(lookahead));//error*/
+        else errorWithNext("un unexpected token. expected NUM or ID found: "+tokensWithStrings.get(lookahead));//error
 
     }
 
@@ -237,7 +238,7 @@ public class parser extends lexer{
             case WORD:
 
                 match(WORD);
-                            insCode = Integer.toHexString(tokenVal);// getting the word value and save it as hex
+                            insCode = fill(Integer.toBinaryString(tokenVal),23,false);// getting the word value and save it as hex
                 match(NUM);
                 PC += 3;
                 break;
@@ -249,7 +250,7 @@ public class parser extends lexer{
                     match(STRING);
                     match(QUOTE);
                                 PC += label.length();
-                                insCode = toAsciiHex(label);// getting the char byte value
+                                insCode = toAsciiBin(label);// getting the char byte value
                     match(BYTEVLA);
                     match(QUOTE);}
 
@@ -281,111 +282,127 @@ public class parser extends lexer{
 //-------------------end of grammars-------------------
 
     private void match(int tok){
-        if (lookahead == tok){
-            if(currWordIndex == numOfWord)
-                nextSentence();
-            else
-                lookahead = lexical();
 
-        }
-        else error("syntax error: un unexpected token. expected: "+tokensWithStrings.get(tok)+" found: "+tokensWithStrings.get(lookahead)); //syntax error
+        //if (lookahead != tok) mark it as error and look for the next
+        if (lookahead != tok){ error("syntax error: un unexpected token. expected: "+tokensWithStrings.get(tok)+" found: "+tokensWithStrings.get(lookahead));}
+
+        if(currWordIndex == numOfWord)
+            nextSentence();
+        else
+             lookahead = lexical();
     }
-
-
 
 
     public void error(String errorMsg){
+        String old = errorScreen.getText();
+        if (old == null )old = "";
+        errorScreen.setText(old +"\n"+
+                (lineCounter != 0?("Error line: "+lineCounter+' '):"")+ errorMsg);
+    }
 
-        //  errorScreen.setText("Error line: "+lineCounter+' '+errorMsg);
-
-        /*System.exit(0);*/
-        try {
-            throw new Exception();
-        } catch (Exception e) {
-
-            String old = errorScreen.getText();
-            if (old == null )old = "";
-            errorScreen.setText(old +"\n"+
-                    "Error line: "+lineCounter+' '+errorMsg);
-
-        }
-        /*try {
-                this.finalize();
-            } catch (Throwable throwable) {
-                throwable.printStackTrace();
-            }*/
-        // error
-
+    //Mark error with given message 'errorMsg' and find next token
+    private void errorWithNext(String errorMsg){
+        error(errorMsg); //syntax error
+        if(currWordIndex == numOfWord)
+            nextSentence();
+        else
+            lookahead = lexical();
     }
 
     private void nextSentence(){
-        writeInte();// writing the intermediate list
+        writeInte();// writing the intermediate list current line
 
         lineCounter++;//each time this method is called it is indicate ending of current line and jumping to next line
 
         while (lineCounter <= code.size()){
 
             words = splitIgnoreSpaces(code.get(lineCounter-1).toString());//code.get(lineCounter-1).toString() -> 'code.get()' is return the text line in type of 'CharSequence' that's why we use '.toString()'
-            if (words != null){//in case of null it is mean the line ether line comment or blank line , will skip until find a statement line , or reach the end of program
-                // since splitIgnoreSpaces function return NOT null object , we will reinitialize the variables to  do parsing in the new line
+            if (words != null && words.size() != 0){//in case of null (or words.size()==0)  it is mean the line ether line comment or blank line , will skip until find a statement line , or reach the end of program.
+
+                // since this 'splitIgnoreSpaces' function return NOT null object , we will reinitialize the variables to  do parsing in the new line
                 currWordIndex = 0;
                 numOfWord = words.size();
                 lookahead = lexical();// we do lexical analyzing to the first word in the new line
                 break;
             }
+
             lineCounter++;
         }
         if (lineCounter > code.size()){lineCounter = 0;}//that's mean it reach the end of the program
-        /*try {
-            if (lineCounter > code.size())Thread.currentThread().stop();
-        }catch (Exception e) {
-   // errorScreen.setText("Done ");
-        }*/
-
-
     }
 
     private void pass2() {
+
+        String output = "";
         Iterator<machineCode> it = intermediate.iterator();
         while (it.hasNext()){
             machineCode line = it.next();
+            System.out.println("Line: "+line.getLine()+"Format: "+line.getFormat()+"InsCode: "+line.getInsCode()+"AddressLabel: "+line.getAddressLabel()+"CodeRest: "+line.getCodeRest());
             switch (line.getFormat()){
                 case 0:case 1: output += line.getInsCode()+"\n";
                        break;
-                case 2: output += line.getInsCode()+line.getAddressLabel()+ (line.getCodeRest()== null ? "" :line.getCodeRest())+"\n";
+                case 2: output += line.getInsCode()+line.getAddressLabel(4,false)+ (line.getCodeRest()== null ? "" :line.getCodeRest(4,false))+"\n";
                         break;
-                case 3: output += line.getInsCode().substring(0,5)+"110000"+ optimizeAddressLabel(line.getAddressLabel(),line.getPc(),line.getBase(),line.getFormat())+"\n";
-                case 5: output += line.getInsCode().substring(0,5)+"110001"+"\n";
-                                break;
-                case 4:case 6:output += line.getInsCode().substring(0,5)+ optimizeAddressLabel(line.getCodeRest(),line.getPc(),line.getBase(),line.getFormat())+"\n";
-            }
-             System.out.println(line.getLine()+" "+line.getFormat()+" "+line.getInsCode()+" "+line.getAddressLabel()+" "+line.getCodeRest());
-        }
-    }
-    private String isExist(String addLabel){
-        int index = SymbolTable.indexOf(new entry(addLabel,0,0));//at the beginning we check if the label is defined before
-        if (index != -1)
-            return Integer.toBinaryString(SymbolTable.get(index).getOpcode());
+                case 3: case 4:case 5: case 6: output += line.getInsCode().substring(0,5)+optimizeAddressLabel(line.getLine(),line.getAddressLabel(),line.getPc(),line.getBase(),line.getFormat())+"\n";
+                                                break;//3 -> format 3,4 -> format 3 with indexing,5 -> format 3 with intermediate,6 -> format 3 with indirect.
 
-        error("undefined Label "+addLabel);
+                // ask Pro.Othman -> should we add the value of register x to the final address ?  case 4: output += line.getInsCode().substring(0,5)+optimizeAddressLabel(line.getAddressLabel(),line.getPc(),line.getBase(),line.getFormat())+"\n";
+                case 7: output += line.getInsCode().substring(0,5)+"110001"+isExist(line.getLine(),line.getAddressLabel())+"\n";
+                        break;//7 -> format 4,
+                case 8: output += line.getInsCode().substring(0,5)+"111001"+isExist(line.getLine(),line.getAddressLabel())+"\n";
+                        break;//8 -> format 4 with indexing,
+                case 9: output += line.getInsCode().substring(0,5)+"010001"+isExist(line.getLine(),line.getAddressLabel())+"\n";
+                        break;//9 -> format 4 with intermediate,
+                case 10: output += line.getInsCode().substring(0,5)+"100001"+isExist(line.getLine(),line.getAddressLabel())+"\n";
+                        break;//10 -> format 4 with indirect.
+
+            }
+
+        }
+        machineCodeScreen.setText(output);
+        toHex.setDisable(false);
+    }
+    private String isExist(int line,String addrLabel){
+        int index = SymbolTable.indexOf(new entry(addrLabel,0,0));//at the beginning we check if the label is defined before
+        if (index != -1)
+            return fill(Integer.toBinaryString(SymbolTable.get(index).getAddress()),20,false);
+
+        error("Line: "+line+" undefined Label "+addrLabel);
         return null;
     }
-    private String optimizeAddressLabel(String addLabel, int pc , int base, int format){
 
-        int index = SymbolTable.indexOf(new entry(addLabel,0,0));//at the beginning we check if the label is defined before
+    /*this function has tow tasks first determine wither given label is already defined in the SymbolTable or not.
+     If it is not mark it as error and return null.If it already defined find the address of that label and go to task 2.
+     Task 2 is checking wither given address fit in 12 bits if it is yes return that address as string.
+     If it is not make the address relative to PC or Base and return that address */
+    private String optimizeAddressLabel(int line,String addressLabel, int pc , int base, int format){
+
+        int index = SymbolTable.indexOf(new entry(addressLabel,0,0));//at the beginning we check if the label is defined before
 
         if (index != -1){
             int upperBound = 4095 ;
-            if (format == 5 || format == 6 || format == 9 || format == 10 || format == 13 || format == 14)
-                upperBound = 1048575;
+            /*if (format == 5 || format == 6 || format == 9 || format == 10 || format == 13 || format == 14)
+                upperBound = 1048575;*/
             entry lab = SymbolTable.get(index);
 
-            int address = lab.getOpcode();
-            if (lab.getOpcode() > upperBound) address += address-pc; //relative address to pc
-            return String.valueOf(address);
+            int address = lab.getAddress();
+
+            if (lab.getAddress() > upperBound) address = address - pc; //relative address to pc
+            else; //modification record;
+
+            if (address > upperBound) {error(address+" not fit"); return null;} //relative address to pc not work
+
+            if (format == 3 )
+            return "110010"+fill(Integer.toBinaryString(address),12,false);
+            if (format == 4 )
+            return "111010"+fill(Integer.toBinaryString(address),12,false);
+            if (format == 5 )
+            return "010010"+fill(Integer.toBinaryString(address),12,false);
+            if (format == 6 )
+            return "100010"+fill(Integer.toBinaryString(address),12,false);
         }
 
-        error("undefined Label "+addLabel);
+        error("Line: "+line+" undefined Label "+addressLabel);
         return null;
     }
 
@@ -401,11 +418,11 @@ public class parser extends lexer{
         }
     }
 
-    private String toAsciiHex(String string){
+    private String toAsciiBin(String string){
 
         String  result= "";
         for (char x : string.toCharArray()){
-            result += Integer.toHexString((int)x);
+            result += Integer.toBinaryString((int)x);
         }
 
         return result;
@@ -480,6 +497,41 @@ public class parser extends lexer{
         return false;
     }
 
+    private String fill(String string,int numOfBits,boolean isRight){
 
+        if (isRight)
+            for (int i=string.length();i<=numOfBits;i++)
+                string = string+"0";
+        else
+            for (int i=string.length();i<=numOfBits;i++)
+                string = "0"+string;
+
+
+        return string;
+    }
+boolean hexFlag =false;
+    public void toHexOnAction(){
+        int currBase = 2;
+        int toBase = 16;
+        toHex.setText("Binary");
+        if (hexFlag){
+            currBase = 16;
+            toBase = 2;
+            toHex.setText("Hex");
+        }
+
+        ObservableList<CharSequence> out = machineCodeScreen.getParagraphs();
+         String mOut = "";
+        Iterator<CharSequence> it =out.iterator();
+        while (it.hasNext()){
+            int lin = Integer.parseInt((it.next()).toString(),currBase);
+            mOut += Integer.toString(lin,toBase);
+        }
+
+        machineCodeScreen.setText(mOut);
+
+
+
+    }
 }
 

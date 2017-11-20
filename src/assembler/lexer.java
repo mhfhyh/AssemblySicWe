@@ -51,7 +51,7 @@ public class lexer extends global {
             if (word.equalsIgnoreCase("resb")) return RESB;
                      entry test = new entry(word,0,0);//create an object of entry to compare its mnemonic -> it should be done like that to (overdid method  'equal' work)
             if (opTable.contains(test)) {
-                tokenVal = opTable.get(opTable.indexOf(test)).getOpcode();
+                label = opTable.get(opTable.indexOf(test)).getOpcode();
                 return opTable.get(opTable.indexOf(test)).getToken();}
             if (SymbolTable.contains(test)) return SymbolTable.get(SymbolTable.indexOf(test)).getToken();
             else {label = word; return ID;}

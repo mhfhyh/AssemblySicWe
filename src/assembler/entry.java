@@ -6,9 +6,20 @@ public class entry extends ArrayList{
 
     private String mnemonic;
     private int token;
-    private int opcode;
+    private int address;
+    private String opcode;
 
-    public entry(String mnemonic, int token, int opcode) {
+    public String getOpcode() {
+        return opcode;
+    }
+
+    public entry(String mnemonic, int token, int address) {
+        this.mnemonic = mnemonic;
+        this.token = token;
+        this.address = address;
+    }
+
+    public entry(String mnemonic, int token, String opcode) {
         this.mnemonic = mnemonic;
         this.token = token;
         this.opcode = opcode;
@@ -24,8 +35,8 @@ public class entry extends ArrayList{
         this.token = token;
     }
 
-    public void setOpcode(int opcode) {
-        this.opcode = opcode;
+    public void setAddress(int address) {
+        this.address = address;
     }
 
     public boolean comp(String op){
@@ -51,7 +62,7 @@ public class entry extends ArrayList{
         return token;
     }
 
-    public int getOpcode() {
-        return opcode;
+    public int getAddress() {
+        return address;
     }
 }

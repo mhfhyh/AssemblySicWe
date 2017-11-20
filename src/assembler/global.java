@@ -39,36 +39,33 @@ public class global {
 
 
     global(){
-        opTable.add(new entry("lda",FORMAT3,0x00));
-        opTable.add(new entry("ldx",FORMAT3,0x04));
-        opTable.add(new entry("sta",FORMAT3,0x0c));
-        opTable.add(new entry("stx",FORMAT3,0x10));
+        opTable.add(new entry("lda",FORMAT3,"00000000"));
+        opTable.add(new entry("ldx",FORMAT3,"00000100"));
+        opTable.add(new entry("sta",FORMAT3,"00001100"));
+        opTable.add(new entry("stx",FORMAT3,"00010000"));
 
-        opTable.add(new entry("add",FORMAT3,0x18));
-        opTable.add(new entry("sub",FORMAT3,0x1c));
-        opTable.add(new entry("mul",FORMAT3,0x20));
-        opTable.add(new entry("div",FORMAT3,0x24));
+        opTable.add(new entry("add",FORMAT3,"00011000"));
+        opTable.add(new entry("sub",FORMAT3,"00011100"));
+        opTable.add(new entry("mul",FORMAT3,"00100000"));
+        opTable.add(new entry("div",FORMAT3,"00100100"));
 
-        opTable.add(new entry("comp",FORMAT3,0x28));
-        opTable.add(new entry("jlt" ,FORMAT3,0x38));
-        opTable.add(new entry("jeq" ,FORMAT3,0x30));
-        opTable.add(new entry("jgt" ,FORMAT3,0x34));
+        opTable.add(new entry("comp",FORMAT3,"00101000"));
+        opTable.add(new entry("jlt" ,FORMAT3,"00111000"));
+        opTable.add(new entry("jeq" ,FORMAT3,"00110000"));
+        opTable.add(new entry("jgt" ,FORMAT3,"00110100"));
 
-        opTable.add(new entry("jsub",FORMAT3,0x48));
-        opTable.add(new entry("rsub",FORMAT3,0x4c));
+        opTable.add(new entry("jsub",FORMAT3,"01001000"));
+        opTable.add(new entry("rsub",FORMAT3,"01001100"));
 
-        opTable.add(new entry("addr",FORMAT2,0x90));
-        opTable.add(new entry("subr",FORMAT2,0x94));
-        opTable.add(new entry("mulr",FORMAT2,0x98));
-        opTable.add(new entry("divr",FORMAT2,0x9c));
-        opTable.add(new entry("compr",FORMAT2,0xa0));
-        opTable.add(new entry("claer",FORMAT2,0xb4));
-        opTable.add(new entry("shiftr",FORMAT2,0xa8));
+        opTable.add(new entry("addr",FORMAT2,"10010000"));
+        opTable.add(new entry("subr",FORMAT2,"10010100"));
+        opTable.add(new entry("mulr",FORMAT2,"10011000"));
+        opTable.add(new entry("divr",FORMAT2,"10011100"));
+        opTable.add(new entry("compr",FORMAT2,"10100000"));
+        opTable.add(new entry("claer",FORMAT2,"10110100"));
+        opTable.add(new entry("shiftr",FORMAT2,"10101000"));
 
-        opTable.add(new entry("word",WORD,0x4c));
-        opTable.add(new entry("byte",BYTE,0x4c));
-        opTable.add(new entry("resw",RESW,0x4c));
-        opTable.add(new entry("resb",RESB,0x4c));
+
 
         tokensWithStrings.put(ID,"ID");
         tokensWithStrings.put(FORMAT1,"FORMAT1");

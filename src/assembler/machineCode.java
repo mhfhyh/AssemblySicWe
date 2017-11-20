@@ -28,41 +28,45 @@ public class machineCode extends ArrayList{
         return format;
     }
 
-    public void setFormat(int format) {
-        this.format = format;
-    }
 
     public String getAddressLabel() {
         return addressLabel;
     }
 
-    public void setAddressLabel(String addressLabel) {
-        this.addressLabel = addressLabel;
+    public String getAddressLabel(int num,Boolean isRight) {
+        return fill(addressLabel,num,isRight);
     }
+
+
 
     public int getLine() {
         return line;
     }
 
-    public void setLine(int line) {
-        this.line = line;
-    }
+
 
     public String getInsCode() {
+
         return InsCode;
     }
 
-    public void setInsCode(String insCode) {
-        this.InsCode = insCode;
-    }
+  /*  public String getInsCode(int num,Boolean isRight) {
+
+        return fill(InsCode,num,isRight);
+    }*/
+
+
 
     public String getCodeRest() {
         return codeRest;
     }
 
-    public void setCodeRest(String codeRest) {
-        this.codeRest = codeRest;
+    public String getCodeRest(int num,Boolean isRight) {
+
+        return fill(codeRest, num, isRight);
     }
+
+
 
     public int getPc() {
         return pc;
@@ -78,6 +82,19 @@ public class machineCode extends ArrayList{
 
     public void setBase(int base) {
         this.base = base;
+    }
+
+    private String fill(String string,int numOfBits,boolean isRight){
+
+        if (isRight)
+            for (int i=string.length();i<=numOfBits;i++)
+                string = string+"0";
+        else
+            for (int i=string.length();i<=numOfBits;i++)
+                string = "0"+string;
+
+
+        return string;
     }
 
     /*@Override
