@@ -33,7 +33,7 @@ public class parser extends lexer{
     private int lookahead = -1;
     private int numOfWord;
     private ArrayList<machineCode> intermediate = new ArrayList<>();
-    private int format = -1;
+    private int format = -1 ;
     private String addressLabel = null;
     private String insCode = null;
     private String codeRest = null;
@@ -55,6 +55,7 @@ public class parser extends lexer{
         lineCounter = 0;
         errorScreen.setText("");
         SymbolTable = new ArrayList<>();
+        intermediate = new ArrayList<>();
         //initialize the variables with zero values to began new assembling . At each time user press ok program began from scratch
 
         code = inputScreen.getParagraphs();
@@ -361,6 +362,8 @@ public class parser extends lexer{
         }
         machineCodeScreen.setText(output);
         toHex.setDisable(false);
+        toHex.setText("Hex");
+        hexFlag =false;
     }
     private String isExist(int line,String addrLabel){
         int index = SymbolTable.indexOf(new entry(addrLabel,0,0));//at the beginning we check if the label is defined before
@@ -510,28 +513,59 @@ public class parser extends lexer{
         return string;
     }
 boolean hexFlag =false;
+
     public void toHexOnAction(){
-        int currBase = 2;
-        int toBase = 16;
-        toHex.setText("Binary");
-        if (hexFlag){
-            currBase = 16;
-            toBase = 2;
-            toHex.setText("Hex");
-        }
 
         ObservableList<CharSequence> out = machineCodeScreen.getParagraphs();
-         String mOut = "";
+        String mOut = "";
         Iterator<CharSequence> it =out.iterator();
-        while (it.hasNext()){
-            int lin = Integer.parseInt((it.next()).toString(),currBase);
-            mOut += Integer.toString(lin,toBase);
+
+        if (hexFlag){
+            while (it.hasNext()){
+                String s = "";
+                String x =(it.next()).toString();
+                int sizeX = x.length()/6;
+                int remindX = x.length()%6;
+                int j =0;
+
+                for (int i =0;i<sizeX;i++,j+=6){
+                    String a = x.substring(j,j+6);
+                    int lin = Integer.parseInt(a,16);
+                    mOut += Integer.toString(lin,2);
+                }
+                if (remindX > 1) {
+                    long lin = Long.parseLong(x.substring(x.length()-1-remindX,x.length()-1),16);
+                    s += Long.toString(lin, 2);
+                }
+                mOut +="\n"+s;
+            }
+            toHex.setText("Hex");
+            hexFlag =false;
         }
 
-        machineCodeScreen.setText(mOut);
+        else{
+                while (it.hasNext()){
+                    String s = "";
+                    String x =(it.next()).toString();
+                    int sizeX = x.length()/4;
+                    int remindX = x.length()%4;
+                    int j =0;
 
-
-
+                    for (int i =0;i<sizeX;i++,j+=4){
+                        String a = x.substring(j,j+4);
+                        int lin = Integer.parseInt(a,2);
+                    mOut += Integer.toString(lin,16);
+                    }
+                        if (remindX > 1) {
+                            int lin = Integer.parseInt(x.substring(x.length()-1-remindX,x.length()-1),2);
+                            s += Integer.toString(lin, 16);
+                        }
+                    mOut +="\n"+s;
+                }
+                toHex.setText("Binary");
+                hexFlag =true;
+        }
+        machineCodeScreen.setText(mOut.toUpperCase());
     }
 }
 
