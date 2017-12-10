@@ -3,15 +3,11 @@ package assembler;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TextArea;
+import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
 
 
 public class parser extends lexer{
@@ -28,8 +24,17 @@ public class parser extends lexer{
     @FXML TableColumn<entry,Integer> TypeColumn ;
     @FXML TableColumn<entry,Integer> AddressColumn ;
     @FXML TextArea machineCodeScreen ;
-    @FXML Button toHex;
+    @FXML Button toHexButton;
+    @FXML TableView<machineCode> intermediateTable;
+    @FXML TableColumn<machineCode,Integer> lineCol;
+    @FXML TableColumn<machineCode,Integer> pcCol;
+    @FXML TableColumn<machineCode,Integer> baseCol;
+    @FXML TableColumn<machineCode,Integer> formatCol;
+    @FXML TableColumn<machineCode,String> insCol;
+    @FXML TableColumn<machineCode,String> addressCol;
+    @FXML TableColumn<machineCode,String> restCol;
 
+    private int li=0;
     private int lookahead = -1;
     private int numOfWord;
     private ArrayList<machineCode> intermediate = new ArrayList<>();
@@ -41,12 +46,17 @@ public class parser extends lexer{
     private int Base = 0;
     private int lineBase = 0;
     private int linePc = 0;
+    private int progStatrtAdd;
+    private int progEndtAdd;
+    private int literalCounter;
 
 
     private ObservableList<CharSequence> code ;
 
 
     public void okOnAction(){
+        errorMsg.bindBidirectional(errorScreen.textProperty());//binding the textProperty of 'errorScreen TextArea' with 'errorMsg StringProperty' the result is each time we made a change on 'errorMsg' it do the same change on 'textProperty of errorScreen'
+
 
         tokenVal = -1;
         PC = 0;
@@ -65,11 +75,24 @@ public class parser extends lexer{
 
         //for symbol screen table
     ObservableList<entry> list=FXCollections.observableArrayList(SymbolTable);
-        LabelColumn.setCellValueFactory(new PropertyValueFactory<>("mnemonic"));
+        LabelColumn.setCellValueFactory(new PropertyValueFactory<>("mnemonic_labelName"));
         TypeColumn.setCellValueFactory(new PropertyValueFactory<>("token"));
-        AddressColumn.setCellValueFactory(new PropertyValueFactory<>("opcode"));
+        AddressColumn.setCellValueFactory(new PropertyValueFactory<>("address"));
 
         SymbolTableView.setItems(list);
+
+        ObservableList<machineCode> list1 = FXCollections.observableArrayList(intermediate);
+        lineCol.setCellValueFactory(new PropertyValueFactory<>("line"));
+        pcCol.setCellValueFactory(new PropertyValueFactory<>("pc"));
+        baseCol.setCellValueFactory(new PropertyValueFactory<>("base"));
+        formatCol.setCellValueFactory(new PropertyValueFactory<>("format"));
+        insCol.setCellValueFactory(new PropertyValueFactory<>("InsCode"));
+        addressCol.setCellValueFactory(new PropertyValueFactory<>("addressLabel"));
+        restCol.setCellValueFactory(new PropertyValueFactory<>("codeRest"));
+
+
+        intermediateTable.setItems(list1);
+
     }
 
     private void sic(){
@@ -89,15 +112,16 @@ public class parser extends lexer{
         match(START); // match the word start
         PC = tokenVal;// getting the starting address integer value from the lexical analyzer
         match(NUM);   // match the starting address
-
-        SymbolTable.add(new entry(currLabel,ID,tokenVal));//adding the starting program label with its address to symbol table
+        progEndtAdd =PC;
+        SymbolTable.add(new entry(currLabel,ID,PC));//adding the starting program label with its address to symbol table
 
     }
-
+    String equLabel;
     private void body(){
 
         if (lookahead == ID){
             String currLabel = label;// getting the 'ID' string value from the lexical analyzer
+            equLabel = label;
             match(ID);
                 SymbolTable.add(new entry(currLabel,ID,PC));
             rest();
@@ -107,20 +131,35 @@ public class parser extends lexer{
             stmt();
             body();
         }
-        else if(lookahead == BASE)
+        else if(lookahead == BASE || lookahead == ORG || lookahead == STAR)
             directive();
+            //body();
 
 
     }
     private void directive(){
+
         if (lookahead == BASE){
             match(BASE);
 
-            if (lookahead == NUM)
+            if (lookahead == NUM) match(NUM);
 
-                match(NUM);
+            else if(lookahead == ID) match(ID);
 
-            else match(ID);
+            else errorWithNext("un unexpected token. expected ID or NUM  found:"+tokensWithStrings.get(lookahead));
+        }
+       else if (lookahead == ORG){
+            match(ORG);
+
+            if (lookahead == NUM) match(NUM);
+
+            else if(lookahead == ID) match(ID);
+
+            else errorWithNext("un unexpected token. expected ID or NUM  found:"+tokensWithStrings.get(lookahead));
+        }
+        else if (lookahead == STAR){
+            match(STAR);
+            literal();
         }
 
 
@@ -129,6 +168,7 @@ public class parser extends lexer{
     private void tail(){
         match(END);
         match(ID);
+        progEndtAdd = PC;
 
     }
 
@@ -137,8 +177,24 @@ public class parser extends lexer{
             stmt();
         else if (lookahead == WORD || lookahead == BYTE || lookahead == RESW ||lookahead == RESB)
             data();
+        else if(lookahead == EQU)
+            constant();
        // else error("un unexpected token. found: "+tokensWithStrings.get(lookahead));//error
-
+    }
+    private void constant(){
+        match(EQU);
+        if (lookahead == NUM){
+            match(NUM);
+            SymbolTable.remove(SymbolTable.size()-1);
+            SymbolTable.add(new entry(equLabel,EQU,tokenVal)); //label is EQU ID 'EQU' is the token tokenVal is the value of the constant
+        }
+        else if (lookahead == ID){
+            if (tokenVal == -3){
+                                 constTable.put(lineCounter,symbolFound.getAddress());// in case of 'ID' we will use its address as value , in case of constant 'EQU' we will use its value as value for this constant
+                match(ID);
+            }
+            else error("Not a Backward defined label -> \'"+label +"\' forward is not allowed for constant");
+        }
 
     }
 
@@ -210,7 +266,19 @@ public class parser extends lexer{
             match(ID);
            // index();
         }
+        else if (lookahead == EQUAL)//literal mod
+           literal();
+
+        else if (lookahead == EQU)//constant address label
+            constAddressLabel();
         else errorWithNext("syntax error: un unexpected token. expected: ID or HASH or ATT found: "+tokensWithStrings.get(lookahead));
+    }
+
+    private void constAddressLabel(){
+        if (lookahead == EQU){
+            match(EQU);
+            addressLabel = String.valueOf(symbolFound.getAddress());
+        }
     }
     private void index(){
         if (lookahead == COMMA){
@@ -220,6 +288,11 @@ public class parser extends lexer{
         }
 
 
+    }
+    private void literal(){
+        match(EQUAL);
+        byteValue();
+        LiteralTable.put(addressLabel,-1);
     }
     private void imm(){
 
@@ -239,31 +312,14 @@ public class parser extends lexer{
             case WORD:
 
                 match(WORD);
-                            insCode = fill(Integer.toBinaryString(tokenVal),23,false);// getting the word value and save it as hex
+                            insCode = fill(Integer.toBinaryString(tokenVal),23,false);// getting the word value and save it as hex ,
                 match(NUM);
                 PC += 3;
                 break;
 
             case BYTE:
                  match(BYTE);
-
-                if (lookahead == STRING){
-                    match(STRING);
-                    match(QUOTE);
-                                PC += label.length();
-                                insCode = toAsciiBin(label);// getting the char byte value
-                    match(BYTEVLA);
-                    match(QUOTE);}
-
-                else if (lookahead == HEX) {
-                    match(HEX);
-                    match(QUOTE);
-                                PC += (label.length())/2;
-                                insCode = label;// getting the hex byte value
-                    match(BYTEVLA);
-                    match(QUOTE);
-                    }
-                //else  error("un unexpected token. found: "+tokensWithStrings.get(lookahead)); //error
+                 byteValue();
                 break;
 
             case RESW:
@@ -280,6 +336,28 @@ public class parser extends lexer{
            /* default: error("un unexpected token. found: "+tokensWithStrings.get(lookahead));//error*/
         }
     }
+
+    private void byteValue(){
+
+        if (lookahead == STRING){
+            match(STRING);
+            match(QUOTE);
+            PC += label.length();
+            addressLabel = textToAsciiBin(label);// getting the char byte value
+            match(BYTEVLA);
+            match(QUOTE);}
+
+        else if (lookahead == HEX) {
+            match(HEX);
+            match(QUOTE);
+            PC += (label.length())/2;
+            addressLabel = label;// getting the hex byte value
+            match(BYTEVLA);
+            match(QUOTE);
+        }
+        //else  error("un unexpected token. found: "+tokensWithStrings.get(lookahead)); //error
+
+    }
 //-------------------end of grammars-------------------
 
     private void match(int tok){
@@ -294,45 +372,12 @@ public class parser extends lexer{
     }
 
 
-    public void error(String errorMsg){
-        String old = errorScreen.getText();
-        if (old == null )old = "";
-        errorScreen.setText(old +"\n"+
-                (lineCounter != 0?("Error line: "+lineCounter+' '):"")+ errorMsg);
-    }
 
-    //Mark error with given message 'errorMsg' and find next token
-    private void errorWithNext(String errorMsg){
-        error(errorMsg); //syntax error
-        if(currWordIndex == numOfWord)
-            nextSentence();
-        else
-            lookahead = lexical();
-    }
 
-    private void nextSentence(){
-        writeInte();// writing the intermediate list current line
 
-        lineCounter++;//each time this method is called it is indicate ending of current line and jumping to next line
-
-        while (lineCounter <= code.size()){
-
-            words = splitIgnoreSpaces(code.get(lineCounter-1).toString());//code.get(lineCounter-1).toString() -> 'code.get()' is return the text line in type of 'CharSequence' that's why we use '.toString()'
-            if (words != null && words.size() != 0){//in case of null (or words.size()==0)  it is mean the line ether line comment or blank line , will skip until find a statement line , or reach the end of program.
-
-                // since this 'splitIgnoreSpaces' function return NOT null object , we will reinitialize the variables to  do parsing in the new line
-                currWordIndex = 0;
-                numOfWord = words.size();
-                lookahead = lexical();// we do lexical analyzing to the first word in the new line
-                break;
-            }
-
-            lineCounter++;
-        }
-        if (lineCounter > code.size()){lineCounter = 0;}//that's mean it reach the end of the program
-    }
 
     private void pass2() {
+        literalCounter = progEndtAdd;
 
         String output = "";
         Iterator<machineCode> it = intermediate.iterator();
@@ -361,11 +406,11 @@ public class parser extends lexer{
 
         }
         machineCodeScreen.setText(output);
-        toHex.setDisable(false);
-        toHex.setText("Hex");
+        toHexButton.setDisable(false);
+        toHexButton.setText("Hex");
         hexFlag =false;
     }
-    private String isExist(int line,String addrLabel){
+    protected String isExist(int line,String addrLabel){
         int index = SymbolTable.indexOf(new entry(addrLabel,0,0));//at the beginning we check if the label is defined before
         if (index != -1)
             return fill(Integer.toBinaryString(SymbolTable.get(index).getAddress()),20,false);
@@ -378,12 +423,18 @@ public class parser extends lexer{
      If it is not mark it as error and return null.If it already defined find the address of that label and go to task 2.
      Task 2 is checking wither given address fit in 12 bits if it is yes return that address as string.
      If it is not make the address relative to PC or Base and return that address */
+
     private String optimizeAddressLabel(int line,String addressLabel, int pc , int base, int format){
 
+        if (LiteralTable.containsKey(addressLabel)){
+            if (LiteralTable.get(addressLabel)== -1 ){LiteralTable.replace(addressLabel,literalCounter);}
+        }
+
+            else{// in case of not literal
         int index = SymbolTable.indexOf(new entry(addressLabel,0,0));//at the beginning we check if the label is defined before
 
         if (index != -1){
-            int upperBound = 4095 ;
+            final int upperBound = 4095 ;
             /*if (format == 5 || format == 6 || format == 9 || format == 10 || format == 13 || format == 14)
                 upperBound = 1048575;*/
             entry lab = SymbolTable.get(index);
@@ -403,14 +454,76 @@ public class parser extends lexer{
             return "010010"+fill(Integer.toBinaryString(address),12,false);
             if (format == 6 )
             return "100010"+fill(Integer.toBinaryString(address),12,false);
-        }
+        }}
 
         error("Line: "+line+" undefined Label "+addressLabel);
         return null;
     }
 
 
-    private void writeInte(){
+
+
+
+    //----------------------------------------------
+
+
+
+
+boolean hexFlag =false;
+
+    public void toHexOnAction(){
+
+        ObservableList<CharSequence> out = machineCodeScreen.getParagraphs();
+        String mOut ="";
+        if(hexFlag){
+
+            mOut= toBin(out);
+            hexFlag=true;
+            toHexButton.setText("Hex");
+        }
+       else {
+            mOut= toHex(out);
+            hexFlag=false;
+            toHexButton.setText("Binary");
+        }
+
+
+        machineCodeScreen.setText(mOut.toUpperCase());
+    }
+
+
+    //Mark error with given message 'errorMessage' and find next token
+    private void errorWithNext(String errorMessage){
+        error(errorMessage); //syntax error
+        if(currWordIndex == numOfWord)
+            nextSentence();
+        else
+            lookahead = lexical();
+    }
+
+    private void nextSentence(){
+        writeInte();// writing the intermediate list current line
+
+        lineCounter++;//each time this method is called it is indicate ending of current line and jumping to next line
+
+        while (lineCounter <= code.size()){
+
+            words = splitIgnoreSpaces(code.get(lineCounter-1).toString());//code.get(lineCounter-1).toString() -> 'code.get()' is return the text line in type of 'CharSequence' that's why we use '.toString()'
+            if (words != null && words.size() != 0){//in case of null (or words.size()==0)  it is mean the line ether line comment or blank line , will skip until find a statement line , or reach the end of program.
+
+                // since this 'splitIgnoreSpaces' function return NOT null object , we will reinitialize the variables to  do parsing in the new line
+                currWordIndex = 0;
+                numOfWord = words.size();
+                lookahead = lexical();// we do lexical analyzing to the first word in the new line
+                break;
+            }
+
+            lineCounter++;
+        }
+        if (lineCounter > code.size()){lineCounter = 0;}//that's mean it reach the end of the program
+    }
+
+    private void writeInte(){// write into intermediate list
         if (lineCounter != 0 && insCode != null){ // case of insCode != null mean its an instruction line not a directive
             intermediate.add(new machineCode(lineCounter,linePc, lineBase,format,insCode,addressLabel,codeRest));
             format = -1;
@@ -421,151 +534,6 @@ public class parser extends lexer{
         }
     }
 
-    private String toAsciiBin(String string){
 
-        String  result= "";
-        for (char x : string.toCharArray()){
-            result += Integer.toBinaryString((int)x);
-        }
-
-        return result;
-    }
-
-    //----------------------------------------------
-    //the aim of this function is to convert given text code to ArrayList of string it is ignoring the comment line and the (free lines)
-    private LinkedList<String> splitIgnoreSpaces(String text){
-
-        if(text.length() == 0 || text.charAt(0) == '/') return null; //this is in case of the line is a comment line OR (text.length() == 0) to skip the line spaces
-
-        LinkedList<String> Words = new LinkedList<>();
-        int index = 0;
-        String word="";
-        boolean commentFlag = false;//this indicate finding comment to ignore the rest -> 'false' indicate not finding comment tell now
-        boolean unAcChar = false;//this indicate finding un accepted character
-
-        for(int i=0;i<text.length();i++){// iterate throw all the line
-
-            while (i<text.length() && text.charAt(i)!= ' ' ){// this for finding the complete word to add it
-
-                char ch = text.charAt(i);
-                if (ch == '/'){commentFlag = true; break;}//case of comment to ignore all the text after it
-                if (ch != '@' && ch != '#' && ch != '+'&& ch != ',' && ch != '\'' && ch != '=' && !Character.isDigit(ch) && !isEnglish(ch)){unAcChar = true; error("un accepted character ' "+ch+" '");break;}//error un accepted char}
-
-                if (ch == '\''){
-                    if (word.length()>0) {
-                        if (word.equalsIgnoreCase("c") || word.equalsIgnoreCase("h")) {
-                            Words.add(word);
-                            word = "";
-                        } else error("un accepted prefix ' " + word + " ' before quote , accepted is ether 'c' OR 'h'");
-                    }
-                    Words.add("\'");
-                    i++;
-                    String quotedText="";
-                    while (text.charAt(i)!='\''){
-                        quotedText += String.valueOf(text.charAt(i++));
-                        if (i == text.length()) {error("ending quote \' not found"); break;}
-                    }
-                    Words.add(quotedText);
-                    if (text.charAt(i)=='\''){ i++; Words.add("\'");}
-                    continue; //while we done we have to skip this iteration to next one
-                }
-                if(ch == '@' || ch == '#'|| ch == '+' || ch == ',' || ch == '='){//this is in case if finding ',' comma before or after word. Finding text followed by ('#' or '@') without space in between
-                    if (word.length()>0){
-                        if (ch == ',' ){Words.add(word);word="";}
-                        else error("text is followed by "+ch+" without space in between");
-                    }
-                    Words.add(String.valueOf(ch));
-                    break;
-                }//end of case comma
-
-
-                word+=text.charAt(i);
-                i++;
-            }
-
-            if (word.length()>0){
-                Words.add(word);
-                word="";
-            }
-
-            if (commentFlag)break;//complement of case of comment
-            if (unAcChar)return null;
-
-        }
-        return Words;
-    }//end of splitIgnoreSpaces
-
-    private boolean isEnglish(char ch){
-        if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'))return true;
-        return false;
-    }
-
-    private String fill(String string,int numOfBits,boolean isRight){
-
-        if (isRight)
-            for (int i=string.length();i<=numOfBits;i++)
-                string = string+"0";
-        else
-            for (int i=string.length();i<=numOfBits;i++)
-                string = "0"+string;
-
-
-        return string;
-    }
-boolean hexFlag =false;
-
-    public void toHexOnAction(){
-
-        ObservableList<CharSequence> out = machineCodeScreen.getParagraphs();
-        String mOut = "";
-        Iterator<CharSequence> it =out.iterator();
-
-        if (hexFlag){
-            while (it.hasNext()){
-                String s = "";
-                String x =(it.next()).toString();
-                int sizeX = x.length()/6;
-                int remindX = x.length()%6;
-                int j =0;
-
-                for (int i =0;i<sizeX;i++,j+=6){
-                    String a = x.substring(j,j+6);
-                    int lin = Integer.parseInt(a,16);
-                    mOut += Integer.toString(lin,2);
-                }
-                if (remindX > 1) {
-                    long lin = Long.parseLong(x.substring(x.length()-1-remindX,x.length()-1),16);
-                    s += Long.toString(lin, 2);
-                }
-                mOut +="\n"+s;
-            }
-            toHex.setText("Hex");
-            hexFlag =false;
-        }
-
-        else{
-                while (it.hasNext()){
-                    String s = "";
-                    String x =(it.next()).toString();
-                    int sizeX = x.length()/4;
-                    int remindX = x.length()%4;
-                    int j =0;
-
-                    for (int i =0;i<sizeX;i++,j+=4){
-                        String a = x.substring(j,j+4);
-                        int lin = Integer.parseInt(a,2);
-                    mOut += Integer.toString(lin,16);
-                    }
-                        if (remindX > 1) {
-                            int lin = Integer.parseInt(x.substring(x.length()-1-remindX,x.length()-1),2);
-                            s += Integer.toString(lin, 16);
-                        }
-                    mOut +="\n"+s;
-                }
-                toHex.setText("Binary");
-                hexFlag =true;
-        }
-        machineCodeScreen.setText(mOut.toUpperCase());
-    }
 }
 

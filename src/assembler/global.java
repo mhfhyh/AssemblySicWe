@@ -26,6 +26,11 @@ public class global {
     final int QUOTE = 19;
     final int BYTEVLA = 20;
     final int BASE = 21;
+    final int ORG = 22;
+    final int EQU = 23;
+    final int EQUAL = 24;
+    final int STAR = 25;
+
 
 
     //----------------errors numbers
@@ -34,8 +39,9 @@ public class global {
 
 
     HashMap<Integer,String>  tokensWithStrings = new HashMap<>();
-    public static ArrayList<entry> opTable = new ArrayList<>();
-    public static ArrayList<entry> SymbolTable = new ArrayList<>();
+    static ArrayList<entry> opTable = new ArrayList<>();
+
+
 
 
     global(){

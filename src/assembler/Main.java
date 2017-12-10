@@ -13,6 +13,7 @@ public class Main extends Application {
         Parent root = FXMLLoader.load(getClass().getResource("assemblerScreen.fxml"));
         primaryStage.setTitle("Sic Assembler ");
         primaryStage.setScene(new Scene(root, 526, 504));
+        primaryStage.setMaximized(true);
         primaryStage.show();
     }
 
