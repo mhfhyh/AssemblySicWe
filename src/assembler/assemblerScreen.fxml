@@ -10,15 +10,15 @@
 
 <AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="623.0" prefWidth="1048.0" xmlns="http://javafx.com/javafx/9" xmlns:fx="http://javafx.com/fxml/1" fx:controller="assembler.parser">
     <children>
-        <TextArea fx:id="inputScreen" layoutX="38.0" layoutY="14.0" prefHeight="246.0" prefWidth="334.0" />
+        <TextArea fx:id="inputScreen" layoutX="38.0" layoutY="14.0" prefHeight="246.0" prefWidth="334.0" AnchorPane.topAnchor="14.0" />
         <Button fx:id="ok" layoutX="170.0" layoutY="276.0" maxHeight="55.0" maxWidth="129.0" mnemonicParsing="false" onAction="#okOnAction" prefHeight="34.0" prefWidth="60.0" snapToPixel="false" text="ok" AnchorPane.leftAnchor="170.0" AnchorPane.rightAnchor="170.0">
          <padding>
             <Insets bottom="3.0" left="3.0" right="3.0" top="3.0" />
          </padding></Button>
-      <TextArea fx:id="errorScreen" editable="false" layoutX="14.0" layoutY="339.0" prefHeight="239.0" prefWidth="523.0" />
-      <TextArea fx:id="machineCodeScreen" editable="false" layoutX="544.0" layoutY="339.0" prefHeight="239.0" prefWidth="428.0" />
-      <Button fx:id="toHexButton" disable="true" layoutX="762.0" layoutY="586.0" mnemonicParsing="false" onAction="#toHexOnAction" text="Hex" />
-      <TableView fx:id="intermediateTable" layoutX="573.0" layoutY="13.0" prefHeight="247.0" prefWidth="456.0">
+      <TextArea fx:id="errorScreen" editable="false" layoutX="14.0" layoutY="339.0" prefHeight="239.0" prefWidth="494.0" />
+      <TextArea fx:id="machineCodeScreen" editable="false" layoutX="516.0" layoutY="339.0" prefHeight="239.0" prefWidth="522.0" />
+      <Button fx:id="toHexButton" disable="true" layoutX="935.0" layoutY="280.0" mnemonicParsing="false" onAction="#toHexOnAction" text="Hex" />
+      <TableView fx:id="intermediateTable" layoutX="573.0" layoutY="13.0" prefHeight="247.0" prefWidth="456.0" AnchorPane.rightAnchor="19.0" AnchorPane.topAnchor="13.0">
          <columns>
             <TableColumn fx:id="lineCol" prefWidth="76.800048828125" text="line number" />
             <TableColumn fx:id="pcCol" prefWidth="24.79998779296875" text="pc" />
@@ -42,7 +42,7 @@
             <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
          </columnResizePolicy>
       </TableView>
-      <Label layoutX="25.0" layoutY="13.0" prefHeight="246.0" prefWidth="12.0" text="123456789 ----------" textAlignment="JUSTIFY" wrapText="true" />
+      <Label layoutX="25.0" layoutY="13.0" prefHeight="246.0" prefWidth="12.0" text="123456789 ----------" textAlignment="JUSTIFY" wrapText="true" AnchorPane.leftAnchor="25.0" />
       <Label layoutX="21.0" layoutY="157.0" prefHeight="110.0" prefWidth="19.0" text="1011121314" wrapText="true" />
     </children>
 </AnchorPane>

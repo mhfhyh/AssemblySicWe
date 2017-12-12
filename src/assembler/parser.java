@@ -6,8 +6,14 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 
 
 public class parser extends lexer{
@@ -34,30 +40,35 @@ public class parser extends lexer{
     @FXML TableColumn<machineCode,String> addressCol;
     @FXML TableColumn<machineCode,String> restCol;
 
-    private int li=0;
+
     private int lookahead = -1;
     private int numOfWord;
     private ArrayList<machineCode> intermediate = new ArrayList<>();
     private int format = -1 ;
-    private String addressLabel = null;
+    private static String addressLabel = null;
     private String insCode = null;
     private String codeRest = null;
-
+    private String constLabel = null;
     private int Base = 0;
     private int lineBase = 0;
     private int linePc = 0;
-    private int progStatrtAdd;
-    private int progEndtAdd;
-    private int literalCounter;
+    private int progEndAddress;
+    private int ExecuteLabel=-1;
+    private int literalAddressCounter;
+    private static HashMap<Integer,LiteralTable> LiteralTable = new HashMap<>();
+    private boolean OrgFlag =false;
+    private int OrgPC = -1;
+    private String modification= null;
 
 
     private ObservableList<CharSequence> code ;
 
-
-    public void okOnAction(){
-        errorMsg.bindBidirectional(errorScreen.textProperty());//binding the textProperty of 'errorScreen TextArea' with 'errorMsg StringProperty' the result is each time we made a change on 'errorMsg' it do the same change on 'textProperty of errorScreen'
-
-
+    private void initialize(){
+        lookBack = -1;
+        symbolFound = null;
+        Base =0;
+        lineBase =0;
+        linePc =0;
         tokenVal = -1;
         PC = 0;
         label = null;
@@ -66,21 +77,42 @@ public class parser extends lexer{
         errorScreen.setText("");
         SymbolTable = new ArrayList<>();
         intermediate = new ArrayList<>();
+        LiteralTable = new HashMap<>();
+        progEndAddress = -1;
+        words = new LinkedList<>();
+        currWordIndex = 0;
+        tokenVal = -1;
+        PC = 0;
+        label = null;
+        errorNum = -1;
+        byteFlag = false;
+        SymbolTable = new ArrayList<>();
+        constLabel = null;
+        OrgFlag =false;
+        OrgPC = -1;
+        ExecuteLabel= -1;
+        modification= null;
+    }
+    public void okOnAction(){
+        errorMsg.bindBidirectional(errorScreen.textProperty());
+        //binding the textProperty of 'errorScreen TextArea' with 'errorMsg StringProperty' the result is each time we made a change on 'errorMsg' it do the same change on 'textProperty of errorScreen'
+
+        initialize();
         //initialize the variables with zero values to began new assembling . At each time user press ok program began from scratch
 
         code = inputScreen.getParagraphs();
         nextSentence();
-       // if (words != null)// in case of comment will skip until find a statement not a comment
             sic();
 
         //for symbol screen table
-    ObservableList<entry> list=FXCollections.observableArrayList(SymbolTable);
+        ObservableList<entry> list=FXCollections.observableArrayList(SymbolTable);
         LabelColumn.setCellValueFactory(new PropertyValueFactory<>("mnemonic_labelName"));
         TypeColumn.setCellValueFactory(new PropertyValueFactory<>("token"));
         AddressColumn.setCellValueFactory(new PropertyValueFactory<>("address"));
 
         SymbolTableView.setItems(list);
 
+        //---intermediate table
         ObservableList<machineCode> list1 = FXCollections.observableArrayList(intermediate);
         lineCol.setCellValueFactory(new PropertyValueFactory<>("line"));
         pcCol.setCellValueFactory(new PropertyValueFactory<>("pc"));
@@ -90,17 +122,23 @@ public class parser extends lexer{
         addressCol.setCellValueFactory(new PropertyValueFactory<>("addressLabel"));
         restCol.setCellValueFactory(new PropertyValueFactory<>("codeRest"));
 
-
         intermediateTable.setItems(list1);
 
+
+        writeToObjectFile();//write to object file
     }
 
+
+//starting of the grammars
     private void sic(){
 
         header();
         body();
         tail();
+
         pass2();
+
+
 
     }
 
@@ -112,16 +150,15 @@ public class parser extends lexer{
         match(START); // match the word start
         PC = tokenVal;// getting the starting address integer value from the lexical analyzer
         match(NUM);   // match the starting address
-        progEndtAdd =PC;
         SymbolTable.add(new entry(currLabel,ID,PC));//adding the starting program label with its address to symbol table
 
     }
-    String equLabel;
+
     private void body(){
 
         if (lookahead == ID){
             String currLabel = label;// getting the 'ID' string value from the lexical analyzer
-            equLabel = label;
+            constLabel = label;
             match(ID);
                 SymbolTable.add(new entry(currLabel,ID,PC));
             rest();
@@ -131,10 +168,23 @@ public class parser extends lexer{
             stmt();
             body();
         }
-        else if(lookahead == BASE || lookahead == ORG || lookahead == STAR)
+        else if(lookahead == BASE || lookahead == ORG || lookahead == STAR){
             directive();
-            //body();
+            body();
+        }
 
+
+    }
+    private void tail(){
+        match(END);
+        match(ID);
+
+        progEndAddress = PC;
+
+        if (tokenVal == -3)
+            ExecuteLabel = symbolFound.getAddress();
+
+        else error("Undefined Label after END "+label);
 
     }
     private void directive(){
@@ -148,28 +198,62 @@ public class parser extends lexer{
 
             else errorWithNext("un unexpected token. expected ID or NUM  found:"+tokensWithStrings.get(lookahead));
         }
-       else if (lookahead == ORG){
-            match(ORG);
-
-            if (lookahead == NUM) match(NUM);
-
-            else if(lookahead == ID) match(ID);
-
-            else errorWithNext("un unexpected token. expected ID or NUM  found:"+tokensWithStrings.get(lookahead));
-        }
-        else if (lookahead == STAR){
+       else if (lookahead == ORG)
+           org();
+       else if (lookahead == STAR){
+            format = -2;
             match(STAR);
-            literal();
+            match(EQUAL);
+            byteValue();
+            linePc = PC;
+            PC += addressLabel.length();
+            //insCode = "--";
+            match(QUOTE);
+
         }
 
 
     }
 
-    private void tail(){
-        match(END);
-        match(ID);
-        progEndtAdd = PC;
 
+
+    private void org(){
+        match(ORG);
+
+        if (lookahead == NUM){
+                        optimizeORG(tokenVal);
+            match(NUM);
+        }
+        else if (lookahead == CONST){
+            optimizeORG(symbolFound.getAddress());
+            match(CONST);
+        }
+
+        else if(lookahead == ID){
+            if (tokenVal == -3)//tokenVal == -3 indicate Backward defined label
+                optimizeORG(symbolFound.getAddress());
+
+            else
+                error("Not a Backward defined label -> \'"+label +"\' forward is not allowed for newConstant");
+
+          match(ID);
+        }
+        else {//'ORG' not followed by any thing it mean return to original PC ,that mean it should be Second org otherwise mark it as error
+            if (OrgFlag)errorWithNext("missed token. expected ID or NUM or CONST -> ORG cannot followed by empty, unless it is returned \'ORG\' ,In this error it is not  ");
+        }
+
+
+    }
+    private void optimizeORG(int address){
+        if (OrgFlag){//finding second 'org'
+            PC =OrgPC;
+            OrgFlag = false;
+
+        }else { //finding first 'org'
+            OrgPC =PC;
+            PC = address;
+            OrgFlag = false;
+        }
     }
 
     private void rest(){
@@ -178,28 +262,32 @@ public class parser extends lexer{
         else if (lookahead == WORD || lookahead == BYTE || lookahead == RESW ||lookahead == RESB)
             data();
         else if(lookahead == EQU)
-            constant();
+            newConstant();
        // else error("un unexpected token. found: "+tokensWithStrings.get(lookahead));//error
     }
-    private void constant(){
+    private void newConstant(){
+                        SymbolTable.remove(SymbolTable.size()-1);//since program add Id each time it find one (if it is not address label) we delete that label because we know no it is a label for newConstant
         match(EQU);
         if (lookahead == NUM){
+                        SymbolTable.add(new entry(constLabel,CONST,tokenVal)); //label is EQU ID 'EQU' is the token tokenVal is the value of the newConstant
             match(NUM);
-            SymbolTable.remove(SymbolTable.size()-1);
-            SymbolTable.add(new entry(equLabel,EQU,tokenVal)); //label is EQU ID 'EQU' is the token tokenVal is the value of the constant
         }
         else if (lookahead == ID){
-            if (tokenVal == -3){
-                                 constTable.put(lineCounter,symbolFound.getAddress());// in case of 'ID' we will use its address as value , in case of constant 'EQU' we will use its value as value for this constant
+            if (tokenVal == -3){ //-3 indicate that it is already defined label , see the lexical()
+                                 //usedConstTable.put(lineCounter,symbolFound.getAddress());// in case of 'ID' we will use its address as value , in case of newConstant 'EQU' we will use its value as value for this newConstant
+                        SymbolTable.add(new entry(constLabel,CONST,symbolFound.getAddress())); //label is EQU ID 'EQU' is the token tokenVal is the value of the newConstant
                 match(ID);
             }
-            else error("Not a Backward defined label -> \'"+label +"\' forward is not allowed for constant");
+            else error("Not a Backward defined label -> \'"+label +"\' forward is not allowed for Constant");
         }
-
+        else if (lookahead == CONST){
+            SymbolTable.add(new entry(constLabel,CONST,symbolFound.getAddress())); //label is EQU ID 'EQU' is the token tokenVal is the value of the newConstant
+        }
     }
 
     private void stmt(){
-
+        linePc =PC;
+        lineBase = Base;
         switch (lookahead){
             case FORMAT1:
                              format = 1;//instruction line format
@@ -247,8 +335,7 @@ public class parser extends lexer{
         //if lookahead != COMMA it's mean Format 2 with one operand
     }
     private void z(){//called from stmt->format 3 and format 4
-        linePc = PC;
-        lineBase = Base;
+
         if (lookahead == ID){
                     addressLabel = label;// getting the first operand string value from the lexical analyzer
             match(ID);
@@ -263,23 +350,31 @@ public class parser extends lexer{
         else if(lookahead == AAT){//indirect mode
             match(AAT);
                     format +=3;//instruction line format, if format old value is 3 then format new value is 1 which is indicate (format 3 with indirect) , otherwise (5) -> 13 which is indicate (format 4 with indirect)
-            match(ID);
+            indirect();
            // index();
         }
         else if (lookahead == EQUAL)//literal mod
            literal();
 
-        else if (lookahead == EQU)//constant address label
+        else if (lookahead == CONST)//newConstant address label
             constAddressLabel();
         else errorWithNext("syntax error: un unexpected token. expected: ID or HASH or ATT found: "+tokensWithStrings.get(lookahead));
     }
 
-    private void constAddressLabel(){
-        if (lookahead == EQU){
-            match(EQU);
-            addressLabel = String.valueOf(symbolFound.getAddress());
-        }
+    private void indirect(){
+      if (lookahead == ID)
+            match(ID);
+      else if (lookahead == CONST)
+            constAddressLabel();
+
+      else errorWithNext("un unexpected token. expected ID or CONST found: "+tokensWithStrings.get(lookahead));//error
     }
+
+    private void constAddressLabel(){
+            addressLabel = String.valueOf(symbolFound.getAddress());
+            match(CONST);
+    }
+
     private void index(){
         if (lookahead == COMMA){
             match(COMMA);
@@ -292,8 +387,13 @@ public class parser extends lexer{
     private void literal(){
         match(EQUAL);
         byteValue();
-        LiteralTable.put(addressLabel,-1);
+        LiteralTable.put(lineCounter,new LiteralTable(addressLabel,-1));
+        addressLabel = "--";//we use this notation '--' to indicate that it is literal ,So we can replace it in passe 2
+        match(QUOTE);
+
+
     }
+
     private void imm(){
 
         if (lookahead == NUM)
@@ -301,25 +401,33 @@ public class parser extends lexer{
 
         else if (lookahead == ID)
             match(ID);
-
+        else if (lookahead == CONST)
+            constAddressLabel();
         else errorWithNext("un unexpected token. expected NUM or ID found: "+tokensWithStrings.get(lookahead));//error
 
     }
 
     private void data(){
-            format = 0;
+        linePc =PC;
+        lineBase = Base;
+
         switch (lookahead){
             case WORD:
-
+                format = 0;
                 match(WORD);
-                            insCode = fill(Integer.toBinaryString(tokenVal),23,false);// getting the word value and save it as hex ,
+                            addressLabel = fill(Integer.toBinaryString(tokenVal),23,false);// getting the word value and save it as hex ,
+                            //insCode = "--";
                 match(NUM);
                 PC += 3;
                 break;
 
             case BYTE:
+                            format =0;
                  match(BYTE);
                  byteValue();
+                            PC += addressLabel.length();
+                            //insCode = "--";
+                 match(QUOTE);
                 break;
 
             case RESW:
@@ -338,22 +446,22 @@ public class parser extends lexer{
     }
 
     private void byteValue(){
-
+        /*boolean literalFlag = false;
+        if (lookBack == EQUAL) literalFlag =true;*/
         if (lookahead == STRING){
             match(STRING);
             match(QUOTE);
-            PC += label.length();
             addressLabel = textToAsciiBin(label);// getting the char byte value
             match(BYTEVLA);
-            match(QUOTE);}
+
+        }
 
         else if (lookahead == HEX) {
             match(HEX);
             match(QUOTE);
-            PC += (label.length())/2;
             addressLabel = label;// getting the hex byte value
             match(BYTEVLA);
-            match(QUOTE);
+
         }
         //else  error("un unexpected token. found: "+tokensWithStrings.get(lookahead)); //error
 
@@ -367,40 +475,51 @@ public class parser extends lexer{
 
         if(currWordIndex == numOfWord)
             nextSentence();
-        else
+        else{
+             lookBack = lookahead;
              lookahead = lexical();
+        }
     }
 
-
-
-
-
-
     private void pass2() {
-        literalCounter = progEndtAdd;
+        writeLiteral();
 
         String output = "";
-        Iterator<machineCode> it = intermediate.iterator();
-        while (it.hasNext()){
-            machineCode line = it.next();
-            System.out.println("Line: "+line.getLine()+"Format: "+line.getFormat()+"InsCode: "+line.getInsCode()+"AddressLabel: "+line.getAddressLabel()+"CodeRest: "+line.getCodeRest());
-            switch (line.getFormat()){
-                case 0:case 1: output += line.getInsCode()+"\n";
-                       break;
-                case 2: output += line.getInsCode()+line.getAddressLabel(4,false)+ (line.getCodeRest()== null ? "" :line.getCodeRest(4,false))+"\n";
-                        break;
-                case 3: case 4:case 5: case 6: output += line.getInsCode().substring(0,5)+optimizeAddressLabel(line.getLine(),line.getAddressLabel(),line.getPc(),line.getBase(),line.getFormat())+"\n";
-                                                break;//3 -> format 3,4 -> format 3 with indexing,5 -> format 3 with intermediate,6 -> format 3 with indirect.
+
+        for (machineCode line : intermediate) {
+            // System.out.println("Line: "+line.getLine()+"Format: "+line.getFormat()+"InsCode: "+line.getInsCode()+"AddressLabel: "+line.getAddressLabel()+"CodeRest: "+line.getCodeRest());
+            switch (line.getFormat()) {
+                case -2:
+                case -1:
+                case  0:
+                    output += line.getAddressLabel() + "\n";
+                    break;
+                case 1:
+                    output += line.getInsCode() + "\n";
+                    break;
+                case 2:
+                    output += line.getInsCode() + line.getAddressLabel(4, false) + (line.getCodeRest() == null ? "" : line.getCodeRest(4, false)) + "\n";
+                    break;
+                case 3:
+                case 4:
+                case 5:
+                case 6:
+                    output += line.getInsCode().substring(0, 5) + optimizeAddressLabel(line.getLine(), line.getAddressLabel(), line.getPc(), line.getBase(), line.getFormat()) + "\n";
+                    break;//3 -> format 3,4 -> format 3 with indexing,5 -> format 3 with intermediate,6 -> format 3 with indirect.
 
                 // ask Pro.Othman -> should we add the value of register x to the final address ?  case 4: output += line.getInsCode().substring(0,5)+optimizeAddressLabel(line.getAddressLabel(),line.getPc(),line.getBase(),line.getFormat())+"\n";
-                case 7: output += line.getInsCode().substring(0,5)+"110001"+isExist(line.getLine(),line.getAddressLabel())+"\n";
-                        break;//7 -> format 4,
-                case 8: output += line.getInsCode().substring(0,5)+"111001"+isExist(line.getLine(),line.getAddressLabel())+"\n";
-                        break;//8 -> format 4 with indexing,
-                case 9: output += line.getInsCode().substring(0,5)+"010001"+isExist(line.getLine(),line.getAddressLabel())+"\n";
-                        break;//9 -> format 4 with intermediate,
-                case 10: output += line.getInsCode().substring(0,5)+"100001"+isExist(line.getLine(),line.getAddressLabel())+"\n";
-                        break;//10 -> format 4 with indirect.
+                case 7:
+                    output += line.getInsCode().substring(0, 5) + "110001" + isExist(line.getLine(), line.getAddressLabel()) + "\n";
+                    break;//7 -> format 4,
+                case 8:
+                    output += line.getInsCode().substring(0, 5) + "111001" + isExist(line.getLine(), line.getAddressLabel()) + "\n";
+                    break;//8 -> format 4 with indexing,
+                case 9:
+                    output += line.getInsCode().substring(0, 5) + "010001" + isExist(line.getLine(), line.getAddressLabel()) + "\n";
+                    break;//9 -> format 4 with intermediate,
+                case 10:
+                    output += line.getInsCode().substring(0, 5) + "100001" + isExist(line.getLine(), line.getAddressLabel()) + "\n";
+                    break;//10 -> format 4 with indirect.
 
             }
 
@@ -408,43 +527,45 @@ public class parser extends lexer{
         machineCodeScreen.setText(output);
         toHexButton.setDisable(false);
         toHexButton.setText("Hex");
-        hexFlag =false;
     }
-    protected String isExist(int line,String addrLabel){
-        int index = SymbolTable.indexOf(new entry(addrLabel,0,0));//at the beginning we check if the label is defined before
+
+    private String isExist(int line,String addressLabel){
+        int index = SymbolTable.indexOf(new entry(addressLabel,0,0));//at the beginning we check if the label is defined before
         if (index != -1)
             return fill(Integer.toBinaryString(SymbolTable.get(index).getAddress()),20,false);
 
-        error("Line: "+line+" undefined Label "+addrLabel);
+        error("Line: "+line+" undefined Label "+addressLabel);
         return null;
     }
 
-    /*this function has tow tasks first determine wither given label is already defined in the SymbolTable or not.
+
+    /*this function 'optimizeAddressLabel()' has tow tasks first determine wither given label is already defined in the SymbolTable or not.
      If it is not mark it as error and return null.If it already defined find the address of that label and go to task 2.
      Task 2 is checking wither given address fit in 12 bits if it is yes return that address as string.
      If it is not make the address relative to PC or Base and return that address */
-
     private String optimizeAddressLabel(int line,String addressLabel, int pc , int base, int format){
 
-        if (LiteralTable.containsKey(addressLabel)){
-            if (LiteralTable.get(addressLabel)== -1 ){LiteralTable.replace(addressLabel,literalCounter);}
+        int address=-1;
+        if (addressLabel.equalsIgnoreCase("--")){
+            address = LiteralTable.get(line).getAddress();
+        }
+        else if (SymbolTable.contains(new entry(addressLabel, 0, 0))){ // in case of not literal ,at the beginning we check if the label is defined before
+            int index=SymbolTable.indexOf(new entry(addressLabel, 0, 0));
+            entry lab = SymbolTable.get(index);
+             address= lab.getAddress();
         }
 
-            else{// in case of not literal
-        int index = SymbolTable.indexOf(new entry(addressLabel,0,0));//at the beginning we check if the label is defined before
-
-        if (index != -1){
+        if (address != -1){//in case of address == -1 that is mean it is undefined label
             final int upperBound = 4095 ;
             /*if (format == 5 || format == 6 || format == 9 || format == 10 || format == 13 || format == 14)
                 upperBound = 1048575;*/
-            entry lab = SymbolTable.get(index);
 
-            int address = lab.getAddress();
+            if (address > upperBound) address = address - pc; //relative address to pc
+            else {writeModificationRecord(pc,address);}//modification record;
 
-            if (lab.getAddress() > upperBound) address = address - pc; //relative address to pc
-            else; //modification record;
-
-            if (address > upperBound) {error(address+" not fit"); return null;} //relative address to pc not work
+            if (address > upperBound) {//relative address to pc not work (not fill), mark it as error
+                error(address+" not fit");
+                return null;}
 
             if (format == 3 )
             return "110010"+fill(Integer.toBinaryString(address),12,false);
@@ -454,51 +575,10 @@ public class parser extends lexer{
             return "010010"+fill(Integer.toBinaryString(address),12,false);
             if (format == 6 )
             return "100010"+fill(Integer.toBinaryString(address),12,false);
-        }}
+        }
 
         error("Line: "+line+" undefined Label "+addressLabel);
         return null;
-    }
-
-
-
-
-
-    //----------------------------------------------
-
-
-
-
-boolean hexFlag =false;
-
-    public void toHexOnAction(){
-
-        ObservableList<CharSequence> out = machineCodeScreen.getParagraphs();
-        String mOut ="";
-        if(hexFlag){
-
-            mOut= toBin(out);
-            hexFlag=true;
-            toHexButton.setText("Hex");
-        }
-       else {
-            mOut= toHex(out);
-            hexFlag=false;
-            toHexButton.setText("Binary");
-        }
-
-
-        machineCodeScreen.setText(mOut.toUpperCase());
-    }
-
-
-    //Mark error with given message 'errorMessage' and find next token
-    private void errorWithNext(String errorMessage){
-        error(errorMessage); //syntax error
-        if(currWordIndex == numOfWord)
-            nextSentence();
-        else
-            lookahead = lexical();
     }
 
     private void nextSentence(){
@@ -514,6 +594,7 @@ boolean hexFlag =false;
                 // since this 'splitIgnoreSpaces' function return NOT null object , we will reinitialize the variables to  do parsing in the new line
                 currWordIndex = 0;
                 numOfWord = words.size();
+                lookBack =lookahead;
                 lookahead = lexical();// we do lexical analyzing to the first word in the new line
                 break;
             }
@@ -523,8 +604,38 @@ boolean hexFlag =false;
         if (lineCounter > code.size()){lineCounter = 0;}//that's mean it reach the end of the program
     }
 
+    //Mark error with given message 'errorMessage' and find next token
+    private void errorWithNext(String errorMessage){
+        error(errorMessage); //syntax error
+        if(currWordIndex == numOfWord)
+            nextSentence();
+        else{
+            lookBack =lookahead;
+            lookahead = lexical();
+        }
+    }
+
+
+//----------------------------------------------
+    public void toHexOnAction(){
+
+        ObservableList<CharSequence> out = machineCodeScreen.getParagraphs();
+        String mOut;
+
+        if(toHexButton.getText().equalsIgnoreCase("hex")){
+            mOut = convertToHex(out);
+            toHexButton.setText("Binary");
+        }
+       else {
+            mOut = convertToBin(out);
+            toHexButton.setText("Hex");
+        }
+
+        machineCodeScreen.setText(mOut.toUpperCase());
+    }
+
     private void writeInte(){// write into intermediate list
-        if (lineCounter != 0 && insCode != null){ // case of insCode != null mean its an instruction line not a directive
+        if (lineCounter != 0 && (insCode != null || addressLabel != null)){ // case of insCode != null mean its an instruction line not a directive
             intermediate.add(new machineCode(lineCounter,linePc, lineBase,format,insCode,addressLabel,codeRest));
             format = -1;
             insCode = null;
@@ -534,6 +645,85 @@ boolean hexFlag =false;
         }
     }
 
+    private  void writeModificationRecord(int pc,int address){
+        String pcS =Integer.toBinaryString(pc);
+        String addressLength =Integer.toHexString(Integer.toHexString(address).length());
+        modification += "M";
+        modification += fill(pcS,6,false);
+        modification += fill(addressLength,2,false);
+        modification += "\n";
+    }
+
+   private void writeLiteral(){
+       literalAddressCounter = progEndAddress;
+       LiteralTable.forEach((lineCounter,literal) ->{
+          // System.out.println(lineCounter+": "+literal.getValue()+"  "+literal.getAddress());
+           literal.setAddress(literalAddressCounter);
+           intermediate.add(new machineCode(-1,literalAddressCounter, -2,-1,null,literal.getValue(),null));
+           literalAddressCounter+=literalAddressCounter+literal.getValue().length();
+       });
+   }
+
+   private void writeToObjectFile(){
+        String programName =SymbolTable.get(0).getMnemonic_labelName();
+        int ProgramStartAddress = SymbolTable.get(0).getAddress();
+        String ProgramLength = Integer.toHexString(progEndAddress-ProgramStartAddress);
+       FileWriter writer = null;
+
+       try {
+           writer = new FileWriter(new File("D:\\prg\\"+programName+".obj"));
+       } catch (IOException e) {
+           e.printStackTrace();
+           error(e.getMessage());
+       }
+
+       try {
+           if (writer != null) {
+               //Header----------
+               //Col. 1 H
+               writer.write("H");
+               //Col. 2~7 Program name
+               writer.write(String.format("%-6s",programName));
+               //Col. 8~13 Starting address of object program (hex)
+               writer.write(fill(String.valueOf(ProgramStartAddress),5,false));
+               //Col. 14-19 Length of object program in bytes (hex)
+               writer.write(fill(ProgramLength,5,false)+"\n\n");
+               writer.flush();
+
+
+               int counter = -1;
+               machineCode intemLine ;
+               Iterator<CharSequence> it = machineCodeScreen.getParagraphs().iterator();
+               while (it.hasNext()&& ++counter < intermediate.size()){
+                  CharSequence ch = it.next();
+                   intemLine =intermediate.get(counter);
+                  //Text record----------
+                  // Col.1 T
+                  writer.write("T");
+                  // Col.2~7 Starting address for object code in this record (hex)
+                  writer.write(Integer.toHexString(intemLine.getPc()));
+                  //Col. 8~9 Length of object code in this record in bytes (hex)
+                  writer.write(fill(String.valueOf(ch.length()),2,false));
+                  //Col. 10~69 Object code, represented in hex (2 col. per byte)
+                  writer.write(ch.toString()+"\n");
+                  writer.flush();
+                }
+                //End Record
+               String End= fill(Integer.toHexString(ExecuteLabel),6,false);
+               writer.write("\nE"+End+"\n\n");
+
+                //Modification Record
+               writer.write(modification);
+               writer.close();
+
+           }
+
+
+       } catch (IOException e) {
+           e.printStackTrace();
+           error(e.getMessage());
+       }
+   }
 
 }
 

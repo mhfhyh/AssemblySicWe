@@ -4,25 +4,18 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.ObservableList;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 
 class helperClass extends global {
-
-    static LinkedList<String> words;
-    static int currWordIndex = 0;
-    static int tokenVal = -1;
-    static int PC = 0;
-    static String label = null;
-    int errorNum = -1;
     static int lineCounter = 0;
-    static Boolean byteFlag = false;
-    static ArrayList<entry> SymbolTable = new ArrayList<>();
-    static HashMap<String,Integer> LiteralTable = new HashMap<>();
+
+
     StringProperty errorMsg =  new SimpleStringProperty(this,"errorMsg","");
-    static HashMap<Integer,Integer> constTable = new HashMap<>();
+    static HashMap<Integer,Integer> usedConstTable = new HashMap<>();
     void error(String error){
 
         errorMsg.setValue(errorMsg.getValue()+"\n"+
@@ -47,62 +40,33 @@ class helperClass extends global {
         return unFilled;
     }
 
-    String toHex(ObservableList<CharSequence> out){
+     String convertToHex(ObservableList<CharSequence> out){
+        StringBuilder text = new StringBuilder("");
+        out.forEach(e->{
+            String s =e.toString();
 
-        String mOut = "";
-        Iterator<CharSequence> it =out.iterator();
-
-            while (it.hasNext()){
-                String s = "";
-                String x =(it.next()).toString();
-                int sizeX = x.length()/4;
-                int remindX = x.length()%4;
-                int j =0;
-
-                for (int i =0;i<sizeX;i++,j+=4){
-                    String a = x.substring(j,j+4);
-                    int lin = Integer.parseInt(a,2);
-                    mOut += Integer.toString(lin,16);
-                }
-                if (remindX > 1) {
-                    int lin = Integer.parseInt(x.substring(x.length()-1-remindX,x.length()-1),2);
-                    s += Integer.toString(lin, 16);
-                }
-                mOut +="\n"+s;
+            if (s.length() != 0) {
+                BigInteger b = new BigInteger(s,2);
+                text.append(b.toString(16)+"\n");
             }
-
-
-
-
-        return mOut;
+        });
+        return text.toString();
     }
 
-    String toBin(ObservableList<CharSequence> out){
-        String mOut = "";
-        Iterator<CharSequence> it =out.iterator();
 
+     String convertToBin(ObservableList<CharSequence> out){
+        StringBuilder text = new StringBuilder("");
+        out.forEach(e->{
+            String s =e.toString();
 
-            while (it.hasNext()){
-                String s = "";
-                String x =(it.next()).toString();
-                int sizeX = x.length()/6;
-                int remindX = x.length()%6;
-                int j =0;
-
-                for (int i =0;i<sizeX;i++,j+=6){
-                    String a = x.substring(j,j+6);
-                    int lin = Integer.parseInt(a,16);
-                    mOut += Integer.toString(lin,2);
-                }
-                if (remindX > 1) {
-                    long lin = Long.parseLong(x.substring(x.length()-1-remindX,x.length()-1),16);
-                    s += Long.toString(lin, 2);
-                }
-                mOut +="\n"+s;
+            if (s.length() != 0) {
+                BigInteger b = new BigInteger( s.toLowerCase(),16);
+                text.append(b.toString(2)+"\n");
             }
-
-     return mOut;
+        });
+        return text.toString();
     }
+
 
     String textToAsciiBin(String string){
 

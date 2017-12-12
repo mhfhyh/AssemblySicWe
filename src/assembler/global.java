@@ -30,6 +30,7 @@ public class global {
     final int EQU = 23;
     final int EQUAL = 24;
     final int STAR = 25;
+    final int CONST = 26;
 
 
 

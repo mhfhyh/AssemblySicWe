@@ -3,16 +3,23 @@ package assembler;
 import java.util.ArrayList;
 import java.util.LinkedList;
 
-public class lexer extends helperClass {
+class lexer extends helperClass {
 
-    protected int numOfWord;
-    protected int lookahead = -1;
-    protected ArrayList<machineCode> intermediate = new ArrayList<>();
+    static LinkedList<String> words;
+    static int currWordIndex = 0;
+    static int tokenVal = -1;
+    static int PC = 0;
+    static String label = null;
+    int errorNum = -1;
+
+    static Boolean byteFlag = false;
+    static ArrayList<entry> SymbolTable = new ArrayList<>();
+    int lookBack = -1;
     entry symbolFound;
 
 
 
-    protected int lexical(){
+    int lexical(){
 
         String word = words.get(currWordIndex++);
 
@@ -30,11 +37,11 @@ public class lexer extends helperClass {
             if (word.length()== 1){
                 if (word.equalsIgnoreCase("A")){label = "0";return REGISTER;}
                 if (word.equalsIgnoreCase("X")){label = "1";return REGISTER;}
-                if (word.equalsIgnoreCase("L")){label = "2";return REGISTER;}
-                if (word.equalsIgnoreCase("B")){label = "3";return REGISTER;}
-                if (word.equalsIgnoreCase("S")){label = "4";return REGISTER;}
-                if (word.equalsIgnoreCase("T")){label = "5";return REGISTER;}
-                if (word.equalsIgnoreCase("F")){label = "6";return REGISTER;}
+                if (word.equalsIgnoreCase("L")){label = "10";return REGISTER;}
+                if (word.equalsIgnoreCase("B")){label = "11";return REGISTER;}
+                if (word.equalsIgnoreCase("S")){label = "100";return REGISTER;}
+                if (word.equalsIgnoreCase("T")){label = "101";return REGISTER;}
+                if (word.equalsIgnoreCase("F")){label = "110";return REGISTER;}
                 if (word.equalsIgnoreCase("H"))return HEX;
                 if (word.equalsIgnoreCase("C"))return STRING;
             }
@@ -152,8 +159,7 @@ public class lexer extends helperClass {
         return Words;
     }//end of splitIgnoreSpaces
     private boolean isEnglish(char ch){
-        if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'))return true;
-        return false;
+        return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
     }
 
 
