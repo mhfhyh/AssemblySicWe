@@ -3,13 +3,15 @@ package assembler;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.cell.PropertyValueFactory;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -353,12 +355,14 @@ public class parser extends lexer{
             indirect();
            // index();
         }
-        else if (lookahead == EQUAL)//literal mod
-           literal();
+        else if (lookahead == EQUAL) {//literal mod
+            literal();
+            index();
+        }
 
         else if (lookahead == CONST)//newConstant address label
             constAddressLabel();
-        else errorWithNext("syntax error: un unexpected token. expected: ID or HASH or ATT found: "+tokensWithStrings.get(lookahead));
+        else errorWithNext("syntax error: un unexpected token After \'"+tokensWithStrings.get(lookBack)+"\' . Expected:  ID or HASH or ATT found: "+tokensWithStrings.get(lookahead));
     }
 
     private void indirect(){
@@ -371,7 +375,7 @@ public class parser extends lexer{
     }
 
     private void constAddressLabel(){
-            addressLabel = String.valueOf(symbolFound.getAddress());
+            addressLabel = Integer.toBinaryString(symbolFound.getAddress());
             match(CONST);
     }
 
@@ -396,13 +400,17 @@ public class parser extends lexer{
 
     private void imm(){
 
-        if (lookahead == NUM)
+        if (lookahead == NUM) {
+            addressLabel = Integer.toBinaryString(tokenVal);
             match(NUM);
-
-        else if (lookahead == ID)
+        }
+        else if (lookahead == ID){
+            addressLabel = label;
             match(ID);
-        else if (lookahead == CONST)
+        }
+        else if (lookahead == CONST){
             constAddressLabel();
+        }
         else errorWithNext("un unexpected token. expected NUM or ID found: "+tokensWithStrings.get(lookahead));//error
 
     }
@@ -471,7 +479,7 @@ public class parser extends lexer{
     private void match(int tok){
 
         //if (lookahead != tok) mark it as error and look for the next
-        if (lookahead != tok){ error("syntax error: un unexpected token. expected: "+tokensWithStrings.get(tok)+" found: "+tokensWithStrings.get(lookahead));}
+        if (lookahead != tok){ error("syntax error: un unexpected token After \'"+tokensWithStrings.get(lookBack)+"\' . Expected: "+tokensWithStrings.get(tok)+" found: "+tokensWithStrings.get(lookahead));}
 
         if(currWordIndex == numOfWord)
             nextSentence();
@@ -500,9 +508,15 @@ public class parser extends lexer{
                 case 2:
                     output += line.getInsCode() + line.getAddressLabel(4, false) + (line.getCodeRest() == null ? "" : line.getCodeRest(4, false)) + "\n";
                     break;
+                case 5:
+                    output += line.getInsCode().substring(0, 5);
+                    if(Character.isDigit(line.getAddressLabel().charAt(0)))
+                        output+=line.getAddressLabel(12,false)+"\n";
+                    else output += optimizeAddressLabel(line.getLine(), line.getAddressLabel(), line.getPc(), line.getBase(), line.getFormat()) + "\n";
+
+                    break;
                 case 3:
                 case 4:
-                case 5:
                 case 6:
                     output += line.getInsCode().substring(0, 5) + optimizeAddressLabel(line.getLine(), line.getAddressLabel(), line.getPc(), line.getBase(), line.getFormat()) + "\n";
                     break;//3 -> format 3,4 -> format 3 with indexing,5 -> format 3 with intermediate,6 -> format 3 with indirect.
@@ -544,7 +558,8 @@ public class parser extends lexer{
      Task 2 is checking wither given address fit in 12 bits if it is yes return that address as string.
      If it is not make the address relative to PC or Base and return that address */
     private String optimizeAddressLabel(int line,String addressLabel, int pc , int base, int format){
-
+        if (addressLabel == null) error("addressLabel == null");
+        else {
         int address=-1;
         if (addressLabel.equalsIgnoreCase("--")){
             address = LiteralTable.get(line).getAddress();
@@ -578,6 +593,8 @@ public class parser extends lexer{
         }
 
         error("Line: "+line+" undefined Label "+addressLabel);
+        return null;
+    }
         return null;
     }
 
@@ -713,7 +730,9 @@ public class parser extends lexer{
                writer.write("\nE"+End+"\n\n");
 
                 //Modification Record
+               if (modification!= null)
                writer.write(modification);
+
                writer.close();
 
            }

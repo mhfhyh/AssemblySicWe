@@ -3,12 +3,12 @@ package assembler;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-public class global {
+class global {
     final int ID = 0;
     final int FORMAT1 = 1;
     final int FORMAT2 = 2;
     final int FORMAT3 = 3;
-    final int FORMAT4 = 4;
+    //final int FORMAT4 = 4;
     final int START = 5;
     final int NUM = 6;
     final int REGISTER = 7;
@@ -46,6 +46,8 @@ public class global {
 
 
     global(){
+        opTable.add(new entry("rsub",FORMAT1,"01001100"));
+
         opTable.add(new entry("lda",FORMAT3,"00000000"));
         opTable.add(new entry("ldx",FORMAT3,"00000100"));
         opTable.add(new entry("sta",FORMAT3,"00001100"));
@@ -60,9 +62,19 @@ public class global {
         opTable.add(new entry("jlt" ,FORMAT3,"00111000"));
         opTable.add(new entry("jeq" ,FORMAT3,"00110000"));
         opTable.add(new entry("jgt" ,FORMAT3,"00110100"));
-
         opTable.add(new entry("jsub",FORMAT3,"01001000"));
-        opTable.add(new entry("rsub",FORMAT3,"01001100"));
+        //------------------
+        opTable.add(new entry("stch",FORMAT3,"01001000"));
+        opTable.add(new entry("LDCH",FORMAT3,"01001000"));
+        opTable.add(new entry("ADDF",FORMAT3,"01001000"));
+        opTable.add(new entry("COMPF",FORMAT3,"01001000"));
+        opTable.add(new entry("DIVF",FORMAT3,"01001000"));
+        opTable.add(new entry("TIX",FORMAT3,"01001000"));
+        opTable.add(new entry("STCH",FORMAT3,"01001000"));
+        opTable.add(new entry("LDT",FORMAT3,"01001000"));
+        opTable.add(new entry("LDS",FORMAT3,"01001000"));
+        //--------------------
+
 
         opTable.add(new entry("addr",FORMAT2,"10010000"));
         opTable.add(new entry("subr",FORMAT2,"10010100"));
