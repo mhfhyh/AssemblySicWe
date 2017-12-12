@@ -73,7 +73,7 @@ class global {
         opTable.add(new entry("STCH",FORMAT3,"01001000"));
         opTable.add(new entry("LDT",FORMAT3,"01001000"));
         opTable.add(new entry("LDS",FORMAT3,"01001000"));
-        //--------------------
+        //--------------------/
 
 
         opTable.add(new entry("addr",FORMAT2,"10010000"));

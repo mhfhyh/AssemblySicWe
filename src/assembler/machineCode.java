@@ -23,7 +23,7 @@ public class machineCode extends ArrayList{
         this.codeRest = codeRest;
 
     }
-
+//
     public int getFormat() {
         return format;
     }

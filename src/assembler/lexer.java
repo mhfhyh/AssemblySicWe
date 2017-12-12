@@ -85,6 +85,7 @@ class lexer extends helperClass {
 
         return unExpectedToken;
     }
+
     private boolean isNumeric(String str){
 
         for (char c : str.toCharArray())

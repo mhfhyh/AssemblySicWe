@@ -354,6 +354,7 @@ public class parser extends lexer{
                     format +=3;//instruction line format, if format old value is 3 then format new value is 1 which is indicate (format 3 with indirect) , otherwise (5) -> 13 which is indicate (format 4 with indirect)
             indirect();
            // index();
+            ///Solving som Errors
         }
         else if (lookahead == EQUAL) {//literal mod
             literal();

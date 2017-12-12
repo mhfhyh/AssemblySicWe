@@ -36,7 +36,7 @@ class helperClass extends global {
 
         return unFilled;
     }
-
+///
      String convertToHex(ObservableList<CharSequence> out){
         StringBuilder text = new StringBuilder("");
         out.forEach(e->{
