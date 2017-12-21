@@ -12,13 +12,14 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 
 
-public class parser extends lexer{
+public class parser extends semantic{
     @FXML
     TextArea inputScreen;
 
@@ -198,7 +199,8 @@ public class parser extends lexer{
 
             else if(lookahead == ID) match(ID);
 
-            else errorWithNext("un unexpected token. expected ID or NUM  found:"+tokensWithStrings.get(lookahead));
+            else
+                error("un unexpected token. expected ID or NUM  found:"+tokensWithStrings.get(lookahead));
         }
        else if (lookahead == ORG)
            org();
@@ -222,6 +224,8 @@ public class parser extends lexer{
     private void org(){
         match(ORG);
 
+
+        if (lookBack != -1){//-1 is an indicator for newline
         if (lookahead == NUM){
                         optimizeORG(tokenVal);
             match(NUM);
@@ -240,32 +244,35 @@ public class parser extends lexer{
 
           match(ID);
         }
-        else {//'ORG' not followed by any thing it mean return to original PC ,that mean it should be Second org otherwise mark it as error
-            if (OrgFlag)errorWithNext("missed token. expected ID or NUM or CONST -> ORG cannot followed by empty, unless it is returned \'ORG\' ,In this error it is not  ");
+        else error("syntax error: un unexpected token After "+tokensWithStrings.get(lookBack)+". Expected:  ID or CONST or ID found: "+tokensWithStrings.get(lookahead));
+        }
+        else {//'ORG' not followed by any thing it mean return to original PC (we call it returned 'ORG') ,that mean it should be Second org otherwise mark it as error
+            if (OrgPC == -1)error("missed token. After 'ORG' expected ID or NUM or CONST -> ORG cannot followed by empty, unless it is returned \'ORG\' ,In this error it is not  ");
+            else PC = OrgPC; //return the original PC value that is mean it is " returned 'ORG' "
         }
 
 
     }
     private void optimizeORG(int address){
-        if (OrgFlag){//finding second 'org'
-            PC =OrgPC;
-            OrgFlag = false;
+        if (OrgPC != -1)//finding second 'org'
+            error("nested org not allowed");
 
-        }else { //finding first 'org'
+        else { //finding first 'org'
             OrgPC =PC;
             PC = address;
-            OrgFlag = false;
+            //OrgFlag = false;
         }
     }
 
     private void rest(){
-        if (lookahead == FORMAT1 || lookahead == FORMAT2 || lookahead == FORMAT3 ||lookahead == PLUS)
+        if(lookahead == FORMAT1 || lookahead == FORMAT2 || lookahead == FORMAT3 ||lookahead == PLUS)
             stmt();
         else if (lookahead == WORD || lookahead == BYTE || lookahead == RESW ||lookahead == RESB)
             data();
         else if(lookahead == EQU)
             newConstant();
-       // else error("un unexpected token. found: "+tokensWithStrings.get(lookahead));//error
+        else
+            errorWithNext("Missed token. ID should followed by (Instruction OR data directive OR constant directive .But found "+tokensWithStrings.get(lookahead)+" "+constLabel);//error
     }
     private void newConstant(){
                         SymbolTable.remove(SymbolTable.size()-1);//since program add Id each time it find one (if it is not address label) we delete that label because we know no it is a label for newConstant
@@ -426,6 +433,7 @@ public class parser extends lexer{
                 match(WORD);
                             addressLabel = fill(Integer.toBinaryString(tokenVal),23,false);// getting the word value and save it as hex ,
                             //insCode = "--";
+
                 match(NUM);
                 PC += 3;
                 break;
@@ -468,7 +476,10 @@ public class parser extends lexer{
         else if (lookahead == HEX) {
             match(HEX);
             match(QUOTE);
-            addressLabel = label;// getting the hex byte value
+
+            if (label.length() == 0)
+            error("empty byte Value");
+            else  addressLabel = new BigInteger(label,16).toString(2);// getting the hex byte value then convert it to Binary
             match(BYTEVLA);
 
         }
@@ -612,7 +623,7 @@ public class parser extends lexer{
                 // since this 'splitIgnoreSpaces' function return NOT null object , we will reinitialize the variables to  do parsing in the new line
                 currWordIndex = 0;
                 numOfWord = words.size();
-                lookBack =lookahead;
+                lookBack = -1;// to use it as indicator of new line -> we use it i org()
                 lookahead = lexical();// we do lexical analyzing to the first word in the new line
                 break;
             }

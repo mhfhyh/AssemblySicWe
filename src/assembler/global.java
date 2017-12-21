@@ -73,6 +73,9 @@ class global {
         opTable.add(new entry("STCH",FORMAT3,"01001000"));
         opTable.add(new entry("LDT",FORMAT3,"01001000"));
         opTable.add(new entry("LDS",FORMAT3,"01001000"));
+        opTable.add(new entry("STL",FORMAT3,"01001000"));
+        opTable.add(new entry("LDL",FORMAT3,"01001000"));
+
         //--------------------/
 
 
@@ -101,7 +104,12 @@ class global {
         tokensWithStrings.put(COMMA,"COMMA ',' ");
         tokensWithStrings.put(HASH,"HASH '#' ");
         tokensWithStrings.put(QUOTE,"QUOTE '\'' ");
-        tokensWithStrings.put(BYTEVLA,"BYTEVLA");
+        tokensWithStrings.put(BASE,"BASE directive");
+        tokensWithStrings.put(ORG ,"ORG directive");
+        tokensWithStrings.put(EQU ,"EQU directive");
+        tokensWithStrings.put(EQUAL,"EQUAL '=' ");
+        tokensWithStrings.put(STAR ,"STAR '*'");
+        tokensWithStrings.put(CONST ,"CONST variable");
         tokensWithStrings.put(numFollByChar,"number followed by character without space in between");
 
     }
