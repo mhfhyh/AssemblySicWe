@@ -96,7 +96,7 @@ public class parser extends semantic{
         OrgPC = -1;
         ExecuteLabel= -1;
         modification= null;
-        boolean LTORGFlag =false;
+        LTORGFlag =false;
     }
     public void okOnAction(){
         errorMsg.bindBidirectional(errorScreen.textProperty());
@@ -105,8 +105,8 @@ public class parser extends semantic{
         initialize();
         //initialize the variables with zero values to began new assembling . At each time user press ok program began from scratch
 
-        code = inputScreen.getParagraphs();
-        nextSentence();
+        code = inputScreen.getParagraphs();//get the code from inputScreen text area
+        nextSentence();// fetch the first instruction
             sic();
 
         //for symbol screen table
@@ -117,7 +117,7 @@ public class parser extends semantic{
 
         SymbolTableView.setItems(list);
 
-        //---intermediate table
+        //--- for intermediate table in GUI
         ObservableList<machineCode> list1 = FXCollections.observableArrayList(intermediate);
         lineCol.setCellValueFactory(new PropertyValueFactory<>("line"));
         pcCol.setCellValueFactory(new PropertyValueFactory<>("pc"));
@@ -177,8 +177,6 @@ public class parser extends semantic{
             directive();
             body();
         }
-
-
     }
     private void tail(){
         match(END);
@@ -218,9 +216,9 @@ public class parser extends semantic{
 
         }
         else if(lookahead == LTORG){
-           LTORGFlag = false;
+           match(LTORG);
+           LTORGFlag = true;
            writeLiteral();
-
         }
 
 
@@ -405,11 +403,19 @@ public class parser extends semantic{
     }
     private void literal(){
         match(EQUAL);
+
+        if (lookahead == STRING || lookahead == HEX){
         byteValue();
         LiteralTable.put(lineCounter,new LiteralTable(addressLabel,-1));
         addressLabel = "--";//we use this notation '--' to indicate that it is literal ,So we can replace it in passe 2
         match(QUOTE);
+        }
 
+        else if (lookahead == STAR) {
+            addressLabel = Integer.toBinaryString(PC);// it is actually act as immediate number value
+            format = -1;
+            match(STAR);
+        }
 
     }
 
@@ -580,7 +586,7 @@ public class parser extends semantic{
         if (addressLabel == null) error("addressLabel == null");
         else {
         int address=-1;
-        if (addressLabel.equalsIgnoreCase("--")){
+        if (addressLabel.equalsIgnoreCase("--")){//replace the address with the address of literal data
             address = LiteralTable.get(line).getAddress();
         }
         else if (SymbolTable.contains(new entry(addressLabel, 0, 0))){ // in case of not literal ,at the beginning we check if the label is defined before
@@ -691,14 +697,15 @@ public class parser extends semantic{
     }
 
    private void writeLiteral(){
-        if (!LTORGFlag)   literalAddressCounter = progEndAddress;
-        else literalAddressCounter = PC;
+        if (LTORGFlag) literalAddressCounter = PC;// in case of finding 'LTORG' then writing literal data after it
+        else literalAddressCounter =  progEndAddress;// in case of writing literal data after 'END'
        LiteralTable.forEach((lineCounter,literal) ->{
           // System.out.println(lineCounter+": "+literal.getValue()+"  "+literal.getAddress());
-           literal.setAddress(literalAddressCounter);
+           literal.setAddress(literalAddressCounter);//setting address for this literal value
            intermediate.add(new machineCode(-1,literalAddressCounter, -2,-1,null,literal.getValue(),null));
            literalAddressCounter+=literalAddressCounter+literal.getValue().length();
        });
+       if(LTORGFlag)PC = literalAddressCounter; // if LTORGFlag = true , it is indicate that 'LTORG' is encountered
    }
 
    private void writeToObjectFile(){
