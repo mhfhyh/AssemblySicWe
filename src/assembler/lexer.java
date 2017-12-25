@@ -55,6 +55,7 @@ class lexer extends helperClass {
             if (word.equalsIgnoreCase("base")) return BASE;
             if (word.equalsIgnoreCase("org")) return ORG;
             if (word.equalsIgnoreCase("equ")) return EQU;
+            if (word.equalsIgnoreCase("LTORG")) return LTORG;
                                  entry test = new entry(word,0,0);//create an object of entry to compare its mnemonic -> it should be done like that to (overdid method  'equal' work)
             if (opTable.contains(test)){
                 label = opTable.get(opTable.indexOf(test)).getOpcode();

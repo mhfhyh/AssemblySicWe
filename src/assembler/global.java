@@ -31,6 +31,7 @@ class global {
     final int EQUAL = 24;
     final int STAR = 25;
     final int CONST = 26;
+    final int LTORG = 27;
 
 
 
@@ -64,17 +65,17 @@ class global {
         opTable.add(new entry("jgt" ,FORMAT3,"00110100"));
         opTable.add(new entry("jsub",FORMAT3,"01001000"));
         //------------------
-        opTable.add(new entry("stch",FORMAT3,"01001000"));
-        opTable.add(new entry("LDCH",FORMAT3,"01001000"));
-        opTable.add(new entry("ADDF",FORMAT3,"01001000"));
+        opTable.add(new entry("stch",FORMAT3, "01001000"));
+        opTable.add(new entry("LDCH",FORMAT3, "01010000"));
+        opTable.add(new entry("ADDF",FORMAT3, "01001000"));
         opTable.add(new entry("COMPF",FORMAT3,"01001000"));
-        opTable.add(new entry("DIVF",FORMAT3,"01001000"));
-        opTable.add(new entry("TIX",FORMAT3,"01001000"));
-        opTable.add(new entry("STCH",FORMAT3,"01001000"));
-        opTable.add(new entry("LDT",FORMAT3,"01001000"));
-        opTable.add(new entry("LDS",FORMAT3,"01001000"));
-        opTable.add(new entry("STL",FORMAT3,"01001000"));
-        opTable.add(new entry("LDL",FORMAT3,"01001000"));
+        opTable.add(new entry("DIVF",FORMAT3, "01001000"));
+        opTable.add(new entry("TIX",FORMAT3,  "00101100"));
+        opTable.add(new entry("STCH",FORMAT3, "01010100"));
+        opTable.add(new entry("LDT",FORMAT3,  "01001000"));
+        opTable.add(new entry("LDS",FORMAT3,  "01001000"));
+        opTable.add(new entry("STL",FORMAT3,  "01001000"));
+        opTable.add(new entry("LDL",FORMAT3,  "01001000"));
 
         //--------------------/
 

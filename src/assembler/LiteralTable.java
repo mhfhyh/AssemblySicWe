@@ -1,26 +1,26 @@
 package assembler;
 
-public class LiteralTable {
+class LiteralTable {
 
     private String value;
     private int address;
 
-    public LiteralTable( String value, int address) {
+    LiteralTable(String value, int address) {
 
         this.value = value;
         this.address = address;
     }
 
 
-    public String getValue() {
+    String getValue() {
         return value;
     }
 
-    public int getAddress() {
+    int getAddress() {
         return address;
     }
 
-    public void setAddress(int address) {
+    void setAddress(int address) {
         this.address = address;
     }
 }

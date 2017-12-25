@@ -62,6 +62,7 @@ public class parser extends semantic{
     private boolean OrgFlag =false;
     private int OrgPC = -1;
     private String modification= null;
+    private boolean LTORGFlag =false;
 
 
     private ObservableList<CharSequence> code ;
@@ -95,6 +96,7 @@ public class parser extends semantic{
         OrgPC = -1;
         ExecuteLabel= -1;
         modification= null;
+        boolean LTORGFlag =false;
     }
     public void okOnAction(){
         errorMsg.bindBidirectional(errorScreen.textProperty());
@@ -171,7 +173,7 @@ public class parser extends semantic{
             stmt();
             body();
         }
-        else if(lookahead == BASE || lookahead == ORG || lookahead == STAR){
+        else if(lookahead == BASE || lookahead == ORG || lookahead == STAR|| lookahead == LTORG){
             directive();
             body();
         }
@@ -213,6 +215,11 @@ public class parser extends semantic{
             PC += addressLabel.length();
             //insCode = "--";
             match(QUOTE);
+
+        }
+        else if(lookahead == LTORG){
+           LTORGFlag = false;
+           writeLiteral();
 
         }
 
@@ -502,7 +509,7 @@ public class parser extends semantic{
     }
 
     private void pass2() {
-        writeLiteral();
+        if (!LTORGFlag)writeLiteral();
 
         String output = "";
 
@@ -676,7 +683,7 @@ public class parser extends semantic{
 
     private  void writeModificationRecord(int pc,int address){
         String pcS =Integer.toBinaryString(pc);
-        String addressLength =Integer.toHexString(Integer.toHexString(address).length());
+        String addressLength =Integer.toBinaryString(Integer.toBinaryString(address).length());
         modification += "M";
         modification += fill(pcS,6,false);
         modification += fill(addressLength,2,false);
@@ -684,7 +691,8 @@ public class parser extends semantic{
     }
 
    private void writeLiteral(){
-       literalAddressCounter = progEndAddress;
+        if (!LTORGFlag)   literalAddressCounter = progEndAddress;
+        else literalAddressCounter = PC;
        LiteralTable.forEach((lineCounter,literal) ->{
           // System.out.println(lineCounter+": "+literal.getValue()+"  "+literal.getAddress());
            literal.setAddress(literalAddressCounter);
@@ -696,11 +704,11 @@ public class parser extends semantic{
    private void writeToObjectFile(){
         String programName =SymbolTable.get(0).getMnemonic_labelName();
         int ProgramStartAddress = SymbolTable.get(0).getAddress();
-        String ProgramLength = Integer.toHexString(progEndAddress-ProgramStartAddress);
+        String ProgramLength = Integer.toBinaryString(progEndAddress-ProgramStartAddress);
        FileWriter writer = null;
 
        try {
-           writer = new FileWriter(new File("D:\\prg\\"+programName+".obj"));
+           writer = new FileWriter(new File("D:"+programName+".obj"));
        } catch (IOException e) {
            e.printStackTrace();
            error(e.getMessage());
@@ -730,15 +738,15 @@ public class parser extends semantic{
                   // Col.1 T
                   writer.write("T");
                   // Col.2~7 Starting address for object code in this record (hex)
-                  writer.write(Integer.toHexString(intemLine.getPc()));
+                  writer.write(Integer.toBinaryString(intemLine.getPc()));
                   //Col. 8~9 Length of object code in this record in bytes (hex)
-                  writer.write(fill(String.valueOf(ch.length()),2,false));
+                  writer.write(fill(Integer.toBinaryString(ch.length()),2,false));
                   //Col. 10~69 Object code, represented in hex (2 col. per byte)
                   writer.write(ch.toString()+"\n");
                   writer.flush();
                 }
                 //End Record
-               String End= fill(Integer.toHexString(ExecuteLabel),6,false);
+               String End= fill(Integer.toBinaryString(ExecuteLabel),6,false);
                writer.write("\nE"+End+"\n\n");
 
                 //Modification Record
