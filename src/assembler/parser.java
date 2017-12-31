@@ -414,7 +414,7 @@ public class parser extends semantic{
         }
 
         else if (lookahead == STAR) {
-            addressLabel = Integer.toBinaryString(PC);// it is actually act as immediate number value
+            addressLabel = Integer.toBinaryString(PC);//PC here it is actually act as immediate number value
             format = -1;
             match(STAR);
         }
@@ -548,7 +548,7 @@ public class parser extends semantic{
                     output += line.getInsCode().substring(0, 5) + F3OptimizeAddress(line.getLine(), line.getAddressLabel(), line.getPc(), line.getBase(), line.getFormat()) + "\n";
                     break;//3 -> format 3,4 -> format 3 with indexing,5 -> format 3 with intermediate,6 -> format 3 with indirect.
 
-                // ask Pro.Othman -> should we add the value of register x to the final address ?  case 4: output += line.getInsCode().substring(0,5)+F3OptimizeAddress(line.getAddressLabel(),line.getPc(),line.getBase(),line.getFormat())+"\n";
+
                 case 7:
                     output += line.getInsCode().substring(0, 5) + "110001" + F4OptimizeAddress(line.getLine(),line.getPc(),line.getAddressLabel()) + "\n";
                     break;//7 -> format 4,
