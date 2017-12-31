@@ -258,8 +258,8 @@ public class parser extends semantic{
 
 
     }
-    private void optimizeORG(int address){
-        if (OrgPC != -1)//finding second 'org'
+    private void optimizeORG(int address){//this is not part of CFG
+        if (OrgPC != -1)//finding second 'org'  , OrgPC containing the PC value at the time org is found otherwise it  = -1
             error("nested org not allowed");
 
         else { //finding first 'org'
@@ -373,8 +373,10 @@ public class parser extends semantic{
             index();
         }
 
-        else if (lookahead == CONST)//newConstant address label
+        else if (lookahead == CONST){//Constant address label
             constAddressLabel();
+            index();
+        }
         else errorWithNext("syntax error: un unexpected token After \'"+tokensWithStrings.get(lookBack)+"\' . Expected:  ID or HASH or ATT found: "+tokensWithStrings.get(lookahead));
     }
 
