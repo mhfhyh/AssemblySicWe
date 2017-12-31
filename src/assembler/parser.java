@@ -598,9 +598,9 @@ public class parser extends semantic{
     //5 -> format 3 with intermediate, -> could be relative
     //6 -> format 3 with indirect, -> could be relative
     /*this function 'F3OptimizeAddress()' has three tasks first determine wither given label is already defined in the SymbolTable or not.
-     If it is not mark it as error and return null.If it already defined find the address of that label.
+     If it is not, mark it as error and return null.If it already defined find the address of that label.
      Task 2 is checking wither given address fit in 12 bits if it is yes return that address as binary as string.
-     If it is not make the address relative to PC or Base and return that address address as binary as string*/
+     If it is not, make the address relative to PC or Base and return that address address as binary as string*/
     private String F3OptimizeAddress(int line, String addressLabel, int pc , int base, int format){
         if (addressLabel == null) error("addressLabel == null");
         else {
@@ -694,7 +694,7 @@ public class parser extends semantic{
     }
 
    private void writeInte(){// write into intermediate list
-        if (lineCounter != 0 && (insCode != null || addressLabel != null)){ // case of insCode != null mean its an instruction line not a directive
+        if (lineCounter != 0 && (insCode != null || addressLabel != null)){ // case of insCode != null mean its an instruction line not a directive , case of line counter == 0 mean there is nothing to write it . It is mean the next instruction is the first line in the program
             intermediate.add(new machineCode(lineCounter,linePc, lineBase,format,insCode,addressLabel,codeRest));
             format = -1;
             insCode = null;
@@ -736,7 +736,7 @@ public class parser extends semantic{
        FileWriter writer = null;
 
        try {
-           writer = new FileWriter(new File("D:"+programName+".obj"));
+           writer = new FileWriter(new File("D:"+programName+".sicxe"));
        } catch (IOException e) {
            e.printStackTrace();
            error(e.getMessage());
