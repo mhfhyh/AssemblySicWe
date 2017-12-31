@@ -111,6 +111,10 @@ class global {
         tokensWithStrings.put(EQUAL,"EQUAL '=' ");
         tokensWithStrings.put(STAR ,"STAR '*'");
         tokensWithStrings.put(CONST ,"CONST variable");
+        tokensWithStrings.put(HEX ,"HEX");
+        tokensWithStrings.put(STRING ,"STRING");
+        tokensWithStrings.put(BYTEVLA ,"BYTEVLA");
+        tokensWithStrings.put(LTORG ,"LTORG");
         tokensWithStrings.put(numFollByChar,"number followed by character without space in between");
 
     }
