@@ -515,12 +515,12 @@ public class parser extends semantic{
     }
 
     private void pass2() {
-        if (!LTORGFlag)writeLiteral();
+        if (!LTORGFlag)writeLiteral();// if LTORGFlag = true , it is indicate that 'LTORG' is encountered
 
         String output = "";
 
         for (machineCode line : intermediate) {
-            // System.out.println("Line: "+line.getLine()+"Format: "+line.getFormat()+"InsCode: "+line.getInsCode()+"AddressLabel: "+line.getAddressLabel()+"CodeRest: "+line.getCodeRest());
+
             switch (line.getFormat()) {
                 case -2:
                 case -1:
@@ -537,27 +537,27 @@ public class parser extends semantic{
                     output += line.getInsCode().substring(0, 5);
                     if(Character.isDigit(line.getAddressLabel().charAt(0)))
                         output+=line.getAddressLabel(12,false)+"\n";
-                    else output += optimizeAddressLabel(line.getLine(), line.getAddressLabel(), line.getPc(), line.getBase(), line.getFormat()) + "\n";
+                    else output += F3OptimizeAddress(line.getLine(), line.getAddressLabel(), line.getPc(), line.getBase(), line.getFormat()) + "\n";
 
                     break;
                 case 3:
                 case 4:
                 case 6:
-                    output += line.getInsCode().substring(0, 5) + optimizeAddressLabel(line.getLine(), line.getAddressLabel(), line.getPc(), line.getBase(), line.getFormat()) + "\n";
+                    output += line.getInsCode().substring(0, 5) + F3OptimizeAddress(line.getLine(), line.getAddressLabel(), line.getPc(), line.getBase(), line.getFormat()) + "\n";
                     break;//3 -> format 3,4 -> format 3 with indexing,5 -> format 3 with intermediate,6 -> format 3 with indirect.
 
-                // ask Pro.Othman -> should we add the value of register x to the final address ?  case 4: output += line.getInsCode().substring(0,5)+optimizeAddressLabel(line.getAddressLabel(),line.getPc(),line.getBase(),line.getFormat())+"\n";
+                // ask Pro.Othman -> should we add the value of register x to the final address ?  case 4: output += line.getInsCode().substring(0,5)+F3OptimizeAddress(line.getAddressLabel(),line.getPc(),line.getBase(),line.getFormat())+"\n";
                 case 7:
-                    output += line.getInsCode().substring(0, 5) + "110001" + isExist(line.getLine(), line.getAddressLabel()) + "\n";
+                    output += line.getInsCode().substring(0, 5) + "110001" + F4OptimizeAddress(line.getLine(),line.getPc(),line.getAddressLabel()) + "\n";
                     break;//7 -> format 4,
                 case 8:
-                    output += line.getInsCode().substring(0, 5) + "111001" + isExist(line.getLine(), line.getAddressLabel()) + "\n";
+                    output += line.getInsCode().substring(0, 5) + "111001" + F4OptimizeAddress(line.getLine(),line.getPc(),line.getAddressLabel()) + "\n";
                     break;//8 -> format 4 with indexing,
                 case 9:
-                    output += line.getInsCode().substring(0, 5) + "010001" + isExist(line.getLine(), line.getAddressLabel()) + "\n";
+                    output += line.getInsCode().substring(0, 5) + "010001" + F4OptimizeAddress(line.getLine(),line.getPc(),line.getAddressLabel()) + "\n";
                     break;//9 -> format 4 with intermediate,
                 case 10:
-                    output += line.getInsCode().substring(0, 5) + "100001" + isExist(line.getLine(), line.getAddressLabel()) + "\n";
+                    output += line.getInsCode().substring(0, 5) + "100001" + F4OptimizeAddress(line.getLine(),line.getPc(), line.getAddressLabel()) + "\n";
                     break;//10 -> format 4 with indirect.
 
             }
@@ -568,21 +568,38 @@ public class parser extends semantic{
         toHexButton.setText("Hex");
     }
 
-    private String isExist(int line,String addressLabel){
-        int index = SymbolTable.indexOf(new entry(addressLabel,0,0));//at the beginning we check if the label is defined before
-        if (index != -1)
-            return fill(Integer.toBinaryString(SymbolTable.get(index).getAddress()),20,false);
 
+    //this function is specific to 7 -> format 4,
+    //8 -> format 4 with indexing,
+    //9 -> format 4 with intermediate,
+    //10 -> format 4 with indirect
+    private String F4OptimizeAddress(int line, int pc, String addressLabel){
+        int address =-1;
+
+        if (addressLabel.equalsIgnoreCase("--")){//replace the address with the address of literal data
+            address = LiteralTable.get(line).getAddress();
+        }
+        else address = SymbolTable.indexOf(new entry(addressLabel,0,0));//in case not literal, at the beginning we check if the label is defined before
+
+        if (address != -1) {
+            address = SymbolTable.get(address).getAddress();
+            writeModificationRecord(pc,address);
+            return fill(Integer.toBinaryString(address), 20, false);
+        }
         error("Line: "+line+" undefined Label "+addressLabel);
         return null;
     }
 
-
-    /*this function 'optimizeAddressLabel()' has tow tasks first determine wither given label is already defined in the SymbolTable or not.
-     If it is not mark it as error and return null.If it already defined find the address of that label and go to task 2.
-     Task 2 is checking wither given address fit in 12 bits if it is yes return that address as string.
-     If it is not make the address relative to PC or Base and return that address */
-    private String optimizeAddressLabel(int line,String addressLabel, int pc , int base, int format){
+    //this function is specific to
+    // 3 -> format 3, -> could be relative
+    //4 -> format 3 with indexing, -> could be relative
+    //5 -> format 3 with intermediate, -> could be relative
+    //6 -> format 3 with indirect, -> could be relative
+    /*this function 'F3OptimizeAddress()' has three tasks first determine wither given label is already defined in the SymbolTable or not.
+     If it is not mark it as error and return null.If it already defined find the address of that label.
+     Task 2 is checking wither given address fit in 12 bits if it is yes return that address as binary as string.
+     If it is not make the address relative to PC or Base and return that address address as binary as string*/
+    private String F3OptimizeAddress(int line, String addressLabel, int pc , int base, int format){
         if (addressLabel == null) error("addressLabel == null");
         else {
         int address=-1;
@@ -597,11 +614,9 @@ public class parser extends semantic{
 
         if (address != -1){//in case of address == -1 that is mean it is undefined label
             final int upperBound = 4095 ;
-            /*if (format == 5 || format == 6 || format == 9 || format == 10 || format == 13 || format == 14)
-                upperBound = 1048575;*/
 
             if (address > upperBound) address = address - pc; //relative address to pc
-            else {writeModificationRecord(pc,address);}//modification record;
+            else {writeModificationRecord(pc,address);}//modification record; if it is not relative
 
             if (address > upperBound) {//relative address to pc not work (not fill), mark it as error
                 error(address+" not fit");
@@ -659,7 +674,7 @@ public class parser extends semantic{
 
 
 //----------------------------------------------
-    public void toHexOnAction(){
+   public void toHexOnAction(){
 
         ObservableList<CharSequence> out = machineCodeScreen.getParagraphs();
         String mOut;
@@ -676,7 +691,7 @@ public class parser extends semantic{
         machineCodeScreen.setText(mOut.toUpperCase());
     }
 
-    private void writeInte(){// write into intermediate list
+   private void writeInte(){// write into intermediate list
         if (lineCounter != 0 && (insCode != null || addressLabel != null)){ // case of insCode != null mean its an instruction line not a directive
             intermediate.add(new machineCode(lineCounter,linePc, lineBase,format,insCode,addressLabel,codeRest));
             format = -1;
@@ -687,12 +702,16 @@ public class parser extends semantic{
         }
     }
 
-    private  void writeModificationRecord(int pc,int address){
-        String pcS =Integer.toBinaryString(pc);
+   private  void writeModificationRecord(int pc,int address){
+        String pcS =Integer.toBinaryString(pc+2);
         String addressLength =Integer.toBinaryString(Integer.toBinaryString(address).length());
+        //Col.1 M
         modification += "M";
+       //Col.2-7 starting location of the address field to be modified
         modification += fill(pcS,6,false);
+       //Col.8-9 length of the address field to be modified in bits
         modification += fill(addressLength,2,false);
+       //new line
         modification += "\n";
     }
 
